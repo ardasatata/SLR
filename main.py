@@ -43,11 +43,16 @@ class Processor():
                 seq_train(self.data_loader['train'], self.model, self.optimizer,
                           self.device, epoch, self.recoder)
                 if eval_model:
+                    self.recoder.print_log("### Dev Data ###")
                     dev_wer = seq_eval(self.arg, self.data_loader['dev'], self.model, self.device,
                                        'dev', epoch, self.arg.work_dir, self.recoder, self.arg.evaluate_tool)
                     self.recoder.print_log("Dev WER: {:05.2f}%".format(dev_wer))
+                    self.recoder.print_log("### Test Data ###")
+                    test_wer = seq_eval(self.arg, self.data_loader['test'], self.model, self.device,
+                                        'test', epoch, self.arg.work_dir, self.recoder, self.arg.evaluate_tool)
+                    self.recoder.print_log("Test WER: {:05.2f}%".format(test_wer))
                 if save_model:
-                    model_path = "{}dev_{:05.2f}_epoch{}_model.pt".format(self.arg.work_dir, dev_wer, epoch)
+                    model_path = "{}_dev_{:05.2f}_test_{:05.2f}_epoch{}_model.pt".format(self.arg.work_dir, dev_wer, test_wer, epoch)
                     seq_model_list.append(model_path)
                     print("seq_model_list", seq_model_list)
                     self.save_model(epoch, model_path)
@@ -98,8 +103,10 @@ class Processor():
         optimizer = utils.Optimizer(model, self.arg.optimizer_args)
 
         if self.arg.load_weights:
+            print("Load weights from: ", self.arg.load_weights)
             self.load_model_weights(model, self.arg.load_weights)
         elif self.arg.load_checkpoints:
+            print("Load checkpoints from: ", self.arg.load_checkpoints)
             self.load_checkpoint_weights(model, optimizer)
         model = self.model_to_device(model)
         print("Loading model finished.")

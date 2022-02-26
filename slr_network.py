@@ -67,13 +67,22 @@ class SLRModel(nn.Module):
             framewise = x
 
         conv1d_outputs = self.conv1d(framewise, len_x)
+
+        # Keypoint
+        # conv1d_outputs = self.conv1d(framewise, len_x)
+        # attn
+
         # x: T, B, C
         x = conv1d_outputs['visual_feat']
         lgt = conv1d_outputs['feat_len']
+
+        # torch.cat()
+
         tm_outputs = self.temporal_model(x, lgt)
         outputs = self.classifier(tm_outputs['predictions'])
         pred = None if self.training \
             else self.decoder.decode(outputs, lgt, batch_first=False, probs=False)
+
         conv_pred = None if self.training \
             else self.decoder.decode(conv1d_outputs['conv_logits'], lgt, batch_first=False, probs=False)
 
