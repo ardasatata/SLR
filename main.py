@@ -99,6 +99,9 @@ class Processor():
             **self.arg.model_args,
             gloss_dict=self.gloss_dict,
             loss_weights=self.arg.loss_weights,
+            use_spatial_attn=self.arg.use_spatial_attn,
+            spatial_embedd_dim=self.arg.spatial_embedd_dim,
+            spatial_n_heads=self.arg.spatial_n_heads
         )
         optimizer = utils.Optimizer(model, self.arg.optimizer_args)
 
@@ -133,7 +136,7 @@ class Processor():
                     print('Can Not Remove Weights: {}.'.format(w))
         weights = self.modified_weights(state_dict['model_state_dict'], False)
         # weights = self.modified_weights(state_dict['model_state_dict'])
-        model.load_state_dict(weights, strict=True)
+        model.load_state_dict(weights, strict=False)
 
     @staticmethod
     def modified_weights(state_dict, modified=False):
@@ -203,6 +206,7 @@ if __name__ == '__main__':
             except AttributeError:
                 default_arg = yaml.load(f)
         key = vars(p).keys()
+        print(key)
         for k in default_arg.keys():
             if k not in key:
                 print('WRONG ARG: {}'.format(k))

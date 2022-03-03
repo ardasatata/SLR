@@ -147,6 +147,25 @@ def get_parser():
         type=int,
         default=80,
         help='stop training in which epoch')
+
+    parser.add_argument(
+        '--use-spatial-attn',
+        type=str2bool,
+        default=False,
+        help='use spatial attention layer')
+
+    parser.add_argument(
+        '--spatial-embedd-dim',
+        type=int,
+        default=512,
+        help='Attention dim spatial')
+
+    parser.add_argument(
+        '--spatial-n-heads',
+        type=int,
+        default=4,
+        help='Attention num of heads spatial')
+
     return parser
 
 
