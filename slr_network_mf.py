@@ -71,7 +71,8 @@ class SLRModelMF(nn.Module):
         self.use_spatial_attn = use_spatial_attn
 
         if self.use_spatial_attn:
-            self.spatial_attn = nn.MultiheadAttention(spatial_embedd_dim, spatial_n_heads)
+            # self.spatial_attn = nn.MultiheadAttention(spatial_embedd_dim, spatial_n_heads)
+            self.spatial_attn = MultiHeadedAttention(spatial_n_heads, spatial_embedd_dim, 0.3)
             print('Using Spatial Attention layer', use_spatial_attn)
         else:
             self.spatial_attn = None
@@ -140,8 +141,8 @@ class SLRModelMF(nn.Module):
             framewise = torch.reshape(framewise, (framewise.shape[0], framewise.shape[2], framewise.shape[1]))
             keypoints = torch.reshape(keypoints, (keypoints.shape[0], keypoints.shape[2], keypoints.shape[1]))
 
-            framewise_spatial_attn_out, _ = self.spatial_attn(framewise, framewise, framewise)
-            keypoints_spatial_attn_out, _ = self.spatial_attn(keypoints, keypoints, keypoints)
+            framewise_spatial_attn_out = self.spatial_attn(framewise, framewise, framewise)
+            keypoints_spatial_attn_out= self.spatial_attn(keypoints, keypoints, keypoints)
 
             framewise_spatial_attn_out = torch.reshape(framewise_spatial_attn_out,
                                                        (framewise.shape[0], framewise.shape[2], framewise.shape[1]))
@@ -156,9 +157,10 @@ class SLRModelMF(nn.Module):
 
         # x: T, B, C
         x = conv1d_outputs['visual_feat']
-        lgt = conv1d_outputs['feat_len']
-
+        # x_key: T, B, C
         x_key = conv1d_outputs_key['visual_feat']
+
+        lgt = conv1d_outputs['feat_len']
 
         # print(x_key.shape)
         # print(x.shape)
@@ -171,14 +173,18 @@ class SLRModelMF(nn.Module):
             else self.decoder.decode(outputs, lgt, batch_first=False, probs=False)
         conv_pred = None if self.training \
             else self.decoder.decode(conv1d_outputs['conv_logits'], lgt, batch_first=False, probs=False)
+        key_pred = None if self.training \
+            else self.decoder.decode(conv1d_outputs_key['conv_logits'], lgt, batch_first=False, probs=False)
 
         return {
             "framewise_features": framewise,
             "visual_features": x_cat,
             "feat_len": lgt,
             "conv_logits": conv1d_outputs['conv_logits'],
+            "key_logits": conv1d_outputs_key['conv_logits'],
             "sequence_logits": outputs,
             "conv_sents": conv_pred,
+            "key_sents": key_pred,
             "recognized_sents": pred,
         }
 
@@ -191,6 +197,10 @@ class SLRModelMF(nn.Module):
                                                       label_lgt.cpu().int()).mean()
             elif k == 'SeqCTC':
                 loss += weight * self.loss['CTCLoss'](ret_dict["sequence_logits"].log_softmax(-1),
+                                                      label.cpu().int(), ret_dict["feat_len"].cpu().int(),
+                                                      label_lgt.cpu().int()).mean()
+            elif k == 'KeyCTC':
+                loss += weight * self.loss['CTCLoss'](ret_dict["key_logits"].log_softmax(-1),
                                                       label.cpu().int(), ret_dict["feat_len"].cpu().int(),
                                                       label_lgt.cpu().int()).mean()
             elif k == 'Dist':
@@ -260,55 +270,139 @@ class SLRModelMF(nn.Module):
 #         else:
 #             return o
 
-def attention(q, k, v, d_k, mask=None, dropout=None):
-    scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(d_k)
+# def attention(q, k, v, d_k, mask=None, dropout=None):
+#     scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(d_k)
+#     if mask is not None:
+#         mask = mask.unsqueeze(1)
+#         scores = scores.masked_fill(mask == 0, -1e9)
+#     scores = F.softmax(scores, dim=-1)
+#
+#     if dropout is not None:
+#         scores = dropout(scores)
+#
+#     output = torch.matmul(scores, v)
+#     return output
+#
+#
+# class MultiHeadAttention(nn.Module):
+#     def __init__(self, heads, d_model, dropout=0.1):
+#         super().__init__()
+#
+#         self.d_model = d_model
+#         self.d_k = d_model // heads
+#         self.h = heads
+#
+#         self.q_linear = nn.Linear(d_model, d_model)
+#         self.v_linear = nn.Linear(d_model, d_model)
+#         self.k_linear = nn.Linear(d_model, d_model)
+#         self.dropout = nn.Dropout(dropout)
+#         self.out = nn.Linear(d_model, d_model)
+#
+#     def forward(self, q, k, v, mask=None):
+#         bs = q.size(0)
+#
+#         # perform linear operation and split into h heads
+#
+#         k = self.k_linear(k).view(bs, -1, self.h, self.d_k)
+#         q = self.q_linear(q).view(bs, -1, self.h, self.d_k)
+#         v = self.v_linear(v).view(bs, -1, self.h, self.d_k)
+#
+#         # transpose to get dimensions bs * h * sl * d_model
+#
+#         k = k.transpose(1, 2)
+#         q = q.transpose(1, 2)
+#         v = v.transpose(1, 2)
+#         # calculate attention using function we will define next
+#         scores = attention(q, k, v, self.d_k, mask, self.dropout)
+#
+#         # concatenate heads and put through final linear layer
+#         concat = scores.transpose(1, 2).contiguous() \
+#             .view(bs, -1, self.d_model)
+#
+#         output = self.out(concat)
+#
+#         return output
+
+#A helper function for producing N identical layers
+def clones(module, N):
+    return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
+
+
+#Self-Attention mechanism
+def ScaledDotProductAttention(query, key, value, mask=None, dropout=None):
+
+    "Compute 'Scaled Dot Product Attention'"
+    d_k = query.size(-1)
+    scores = torch.matmul(query, key.transpose(-2, -1)) \
+             / math.sqrt(d_k)
+
+    #src_mask=(batch, 1, 1, max_seq) #NOTE: this is like the tutorials but it is weird!
+    #trg_mask = (batch, 1, max_seq, max_seq)
+    #score=(batch, n_heads, Seq, Seq)
+
     if mask is not None:
-        mask = mask.unsqueeze(1)
         scores = scores.masked_fill(mask == 0, -1e9)
-    scores = F.softmax(scores, dim=-1)
+
+    p_attn = F.softmax(scores, dim = -1)
 
     if dropout is not None:
-        scores = dropout(scores)
+        p_attn = dropout(p_attn)
 
-    output = torch.matmul(scores, v)
-    return output
+    output = torch.matmul(p_attn, value)
+
+    return output #(Batch, n_heads, Seq, d_k)
 
 
-class MultiHeadAttention(nn.Module):
-    def __init__(self, heads, d_model, dropout=0.1):
-        super().__init__()
+class MultiHeadedAttention(nn.Module):
+    def __init__(self, n_heads, n_units, dropout=0.3):
+        """
+        n_heads: the number of attention heads
+        n_units: the number of output units
+        dropout: probability of DROPPING units
+        """
+        super(MultiHeadedAttention, self).__init__()
 
-        self.d_model = d_model
-        self.d_k = d_model // heads
-        self.h = heads
+        # This sets the size of the keys, values, and queries (self.d_k) to all
+        # be equal to the number of output units divided by the number of heads.
+        #d_k = dim of key for one head
+        self.d_k = n_units // n_heads
 
-        self.q_linear = nn.Linear(d_model, d_model)
-        self.v_linear = nn.Linear(d_model, d_model)
-        self.k_linear = nn.Linear(d_model, d_model)
-        self.dropout = nn.Dropout(dropout)
-        self.out = nn.Linear(d_model, d_model)
+        #This requires the number of n_heads to evenly divide n_units.
+        #NOTE: nb of n_units (hidden_size) must be a multiple of 6 (n_heads)
+        assert n_units % n_heads == 0
+        #n_units represent total of units for all the heads
 
-    def forward(self, q, k, v, mask=None):
-        bs = q.size(0)
+        self.n_units = n_units
+        self.n_heads = n_heads
 
-        # perform linear operation and split into h heads
+        self.linears = clones(nn.Linear(n_units, n_units), 4)
 
-        k = self.k_linear(k).view(bs, -1, self.h, self.d_k)
-        q = self.q_linear(q).view(bs, -1, self.h, self.d_k)
-        v = self.v_linear(v).view(bs, -1, self.h, self.d_k)
+        self.dropout = nn.Dropout(p=dropout)
 
-        # transpose to get dimensions bs * h * sl * d_model
 
-        k = k.transpose(1, 2)
-        q = q.transpose(1, 2)
-        v = v.transpose(1, 2)
-        # calculate attention using function we will define next
-        scores = attention(q, k, v, self.d_k, mask, self.dropout)
+    def forward(self, query, key, value, mask=None):
 
-        # concatenate heads and put through final linear layer
-        concat = scores.transpose(1, 2).contiguous() \
-            .view(bs, -1, self.d_model)
+        if mask is not None:
+            # Same mask applied to all h heads.
+            mask = mask.unsqueeze(1)
 
-        output = self.out(concat)
+        nbatches = query.size(0)
 
-        return output
+        # 1) Do all the linear projections in batch from d_model => h x d_k
+        query, key, value = \
+                    [l(x).view(nbatches, -1, self.n_heads, self.d_k).transpose(1, 2)
+                    for l, x in zip(self.linears, (query, key, value))]
+
+
+        # 2) Apply attention on all the projected vectors in batch.
+        x = ScaledDotProductAttention(query, key, value, mask=mask,
+                                 dropout=self.dropout)
+
+        # 3) "Concat" using a view and apply a final linear.
+        x = x.transpose(1, 2).contiguous() \
+             .view(nbatches, -1, self.n_heads * self.d_k)
+
+        z = self.linears[-1](x)
+
+        #(batch_size, seq_len, self.n_units)
+        return z
