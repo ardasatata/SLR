@@ -4,11 +4,11 @@ dataset: phoenix14
 # dataset: phoenix14-si5
 num_epoch: 50
 work_dir: ./work_dir/attn1_keyCTC/
-batch_size: 3
+batch_size: 12
 random_seed: 0
 test_batch_size: 8
-num_worker: 10
-device: 0
+num_worker: 4
+device: 0,1
 log_interval: 50
 eval_interval: 1
 save_interval: 1
@@ -50,4 +50,4 @@ model_args:
 # spatial attention config
 use_spatial_attn: True
 spatial_embedd_dim: 512
-spatial_n_heads: 2
+spatial_n_heads: 4
