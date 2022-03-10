@@ -1,0 +1,4 @@
+dataset_root: ./dataset/csl/
+dict_path: ./preprocess/csl/gloss_dict.npy
+evaluation_dir: ./evaluation/slr_eval_csl
+evaluation_prefix: csl-groundtruth
