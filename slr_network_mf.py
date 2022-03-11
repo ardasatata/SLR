@@ -45,7 +45,8 @@ class ResnetCustom(nn.Module):
 class SLRModelMF(nn.Module):
     def __init__(self, num_classes, c2d_type, conv_type, use_bn=False, tm_type='BiLSTM',
                  hidden_size=1024, gloss_dict=None, loss_weights=None,
-                 use_spatial_attn=False, spatial_embedd_dim=512, spatial_n_heads=4):
+                 use_spatial_attn=False, spatial_embedd_dim=512, spatial_n_heads=4,
+                 use_temporal_attn=False, temporal_embedd_dim=512, temporal_n_heads=4):
         super(SLRModelMF, self).__init__()
         self.decoder = None
         self.loss = dict()
@@ -69,6 +70,7 @@ class SLRModelMF(nn.Module):
         self.register_backward_hook(self.backward_hook)
 
         self.use_spatial_attn = use_spatial_attn
+        self.use_temporal_attn = use_temporal_attn
 
         if self.use_spatial_attn:
             # self.spatial_attn = nn.MultiheadAttention(spatial_embedd_dim, spatial_n_heads)
@@ -77,6 +79,13 @@ class SLRModelMF(nn.Module):
         else:
             self.spatial_attn = None
             print('Spatial Attention layer not Used', use_spatial_attn)
+
+        if self.use_temporal_attn:
+            self.temporal_attn = MultiHeadedAttention(temporal_n_heads, temporal_embedd_dim, 0.3)
+            print('Using Temporal Attention layer', use_temporal_attn)
+        else:
+            self.temporal_attn = None
+            print('Temporal Attention layer not Used', use_temporal_attn)
 
 
 
@@ -162,9 +171,9 @@ class SLRModelMF(nn.Module):
 
         lgt = conv1d_outputs['feat_len']
 
-        # print(x_key.shape)
-        # print(x.shape)
-
+        if self.use_temporal_attn:
+            x_temporal_attn_out = self.temporal_attn(x, x, x)
+            x_key_temporal_attn_out= self.temporal_attn(x_key, x_key, x_key)
         x_cat = torch.cat([x, x_key], 2)
 
         tm_outputs = self.temporal_model(x_cat, lgt)

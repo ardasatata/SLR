@@ -101,7 +101,10 @@ class Processor():
             loss_weights=self.arg.loss_weights,
             use_spatial_attn=self.arg.use_spatial_attn,
             spatial_embedd_dim=self.arg.spatial_embedd_dim,
-            spatial_n_heads=self.arg.spatial_n_heads
+            spatial_n_heads=self.arg.spatial_n_heads,
+            use_temporal_attn=self.arg.use_temporal_attn,
+            temporal_embedd_dim=self.arg.temporal_embedd_dim,
+            temporal_n_heads=self.arg.temporal_n_heads
         )
         optimizer = utils.Optimizer(model, self.arg.optimizer_args)
 

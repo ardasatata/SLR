@@ -166,6 +166,24 @@ def get_parser():
         default=4,
         help='Attention num of heads spatial')
 
+    parser.add_argument(
+        '--use-temporal-attn',
+        type=str2bool,
+        default=False,
+        help='use temporal attention layer')
+
+    parser.add_argument(
+        '--temporal-embedd-dim',
+        type=int,
+        default=512,
+        help='Temporpal Attention dim spatial')
+
+    parser.add_argument(
+        '--temporal-n-heads',
+        type=int,
+        default=4,
+        help='Temporal Attention num of heads spatial')
+
     return parser
 
 
