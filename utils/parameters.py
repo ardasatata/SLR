@@ -111,6 +111,12 @@ def get_parser():
         default=[],
         nargs='+',
         help='the name of weights which will be ignored in the initialization')
+    parser.add_argument(
+        '--ignore-model-state-dict',
+        type=str,
+        default=[],
+        nargs='+',
+        help='the name of weights which in model state dict will be ignored in the initialization')
 
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
     # optim

@@ -64,8 +64,7 @@ class SLRModelMF(nn.Module):
                                    use_bn=use_bn,
                                    num_classes=num_classes)
         self.decoder = utils.Decode(gloss_dict, num_classes, 'beam')
-        self.temporal_model = BiLSTMLayer(rnn_type='LSTM', input_size=hidden_size * 2, hidden_size=hidden_size,
-                                          num_layers=2, bidirectional=True)
+
         self.classifier = nn.Linear(hidden_size, self.num_classes)
         self.register_backward_hook(self.backward_hook)
 
@@ -76,9 +75,13 @@ class SLRModelMF(nn.Module):
             # self.spatial_attn = nn.MultiheadAttention(spatial_embedd_dim, spatial_n_heads)
             self.spatial_attn = MultiHeadedAttention(spatial_n_heads, spatial_embedd_dim, 0.3)
             print('Using Spatial Attention layer', use_spatial_attn)
+            self.temporal_model = BiLSTMLayer(rnn_type='LSTM', input_size=hidden_size * 1, hidden_size=hidden_size,
+                                              num_layers=2, bidirectional=True)
         else:
             self.spatial_attn = None
             print('Spatial Attention layer not Used', use_spatial_attn)
+            self.temporal_model = BiLSTMLayer(rnn_type='LSTM', input_size=hidden_size * 2, hidden_size=hidden_size,
+                                              num_layers=2, bidirectional=True)
 
         if self.use_temporal_attn:
             self.temporal_attn = MultiHeadedAttention(temporal_n_heads, temporal_embedd_dim, 0.3)
@@ -147,22 +150,21 @@ class SLRModelMF(nn.Module):
             framewise = x
 
         if self.use_spatial_attn:
-            framewise = torch.reshape(framewise, (framewise.shape[0], framewise.shape[2], framewise.shape[1]))
-            keypoints = torch.reshape(keypoints, (keypoints.shape[0], keypoints.shape[2], keypoints.shape[1]))
+            framewise_reshape = torch.reshape(framewise, (framewise.shape[0], framewise.shape[2], framewise.shape[1]))
+            keypoints_reshape = torch.reshape(keypoints, (keypoints.shape[0], keypoints.shape[2], keypoints.shape[1]))
 
-            framewise_spatial_attn_out = self.spatial_attn(framewise, framewise, framewise)
-            keypoints_spatial_attn_out= self.spatial_attn(keypoints, keypoints, keypoints)
+            spatial_attention_stream = self.spatial_attn(keypoints_reshape, framewise_reshape, framewise_reshape)
 
-            framewise_spatial_attn_out = torch.reshape(framewise_spatial_attn_out,
-                                                       (framewise.shape[0], framewise.shape[2], framewise.shape[1]))
-            keypoints_spatial_attn_out = torch.reshape(keypoints_spatial_attn_out,
-                                                       (keypoints.shape[0], keypoints.shape[2], keypoints.shape[1]))
+            spatial_attention_stream = torch.reshape(spatial_attention_stream,
+                                                       (framewise.shape[0], framewise.shape[1], framewise.shape[2]))
 
-            conv1d_outputs = self.conv1d(framewise_spatial_attn_out, len_x)
-            conv1d_outputs_key = self.conv1d(keypoints_spatial_attn_out, len_x)
-        else:
-            conv1d_outputs = self.conv1d(framewise, len_x)
-            conv1d_outputs_key = self.conv1d(keypoints, len_x)
+            conv1d_spatial_attn = self.conv1d(spatial_attention_stream, len_x)
+
+            # x_spatial_attn: T, B, C
+            x_spatial_attn = conv1d_spatial_attn['visual_feat']
+
+        conv1d_outputs = self.conv1d(framewise, len_x)
+        conv1d_outputs_key = self.conv1d(keypoints, len_x)
 
         # x: T, B, C
         x = conv1d_outputs['visual_feat']
@@ -174,10 +176,24 @@ class SLRModelMF(nn.Module):
         if self.use_temporal_attn:
             x_temporal_attn_out = self.temporal_attn(x, x, x)
             x_key_temporal_attn_out= self.temporal_attn(x_key, x_key, x_key)
-        x_cat = torch.cat([x, x_key], 2)
+
+        # concat
+        if self.use_spatial_attn:
+            # x_cat = torch.cat([x, x_key, x_spatial_attn], 2)
+            x_cat = x_spatial_attn
+        else:
+            x_cat = torch.cat([x, x_key], 2)
 
         tm_outputs = self.temporal_model(x_cat, lgt)
+
+        tm_outputs_ff = self.temporal_model(x, lgt)
+        tm_outputs_key = self.temporal_model(x_key, lgt)
+
         outputs = self.classifier(tm_outputs['predictions'])
+        outputs_ff = self.classifier(tm_outputs_ff['predictions'])
+        outputs_key = self.classifier(tm_outputs_key['predictions'])
+
+
         pred = None if self.training \
             else self.decoder.decode(outputs, lgt, batch_first=False, probs=False)
         conv_pred = None if self.training \
@@ -195,6 +211,8 @@ class SLRModelMF(nn.Module):
             "conv_sents": conv_pred,
             "key_sents": key_pred,
             "recognized_sents": pred,
+            "seq_ff_logits": outputs_ff,
+            "seq_key_logits": outputs_key,
         }
 
     def criterion_calculation(self, ret_dict, label, label_lgt):
@@ -212,6 +230,17 @@ class SLRModelMF(nn.Module):
                 loss += weight * self.loss['CTCLoss'](ret_dict["key_logits"].log_softmax(-1),
                                                       label.cpu().int(), ret_dict["feat_len"].cpu().int(),
                                                       label_lgt.cpu().int()).mean()
+
+            elif k == 'SeqFullFrameCTC':
+                loss += weight * self.loss['CTCLoss'](ret_dict["seq_ff_logits"].log_softmax(-1),
+                                                      label.cpu().int(), ret_dict["feat_len"].cpu().int(),
+                                                      label_lgt.cpu().int()).mean()
+
+            elif k == 'SeqKeyCTC':
+                loss += weight * self.loss['CTCLoss'](ret_dict["seq_key_logits"].log_softmax(-1),
+                                                      label.cpu().int(), ret_dict["feat_len"].cpu().int(),
+                                                      label_lgt.cpu().int()).mean()
+
             elif k == 'Dist':
                 loss += weight * self.loss['distillation'](ret_dict["conv_logits"],
                                                            ret_dict["sequence_logits"].detach(),

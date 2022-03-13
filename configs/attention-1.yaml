@@ -2,8 +2,8 @@ feeder: dataset.dataloader_video.BaseFeeder
 phase: train
 dataset: phoenix14
 # dataset: phoenix14-si5
-num_epoch: 50
-work_dir: ./work_dir/temporal/temporal
+num_epoch: 80
+work_dir: ./work_dir/spatial_joint/spatial_joint
 batch_size: 3
 random_seed: 0
 test_batch_size: 8
@@ -19,14 +19,16 @@ loss_weights:
 #  KeyCTC: 1.0
   SeqCTC: 1.0
 #  Dist: 10.0
+  SeqFullFrameCTC: 1.0
+  SeqKeyCTC: 1.0
 
 #load_weights: ./work_dir/with_keypoint_attn1_dev_25.70_test_25.71_epoch6_model.pt
-#load_weights: ./work_dir/with_keypoint_base/with_keypoint_dev_24.24_test_25.45_epoch48_model.pt
+load_weights: ./work_dir/with_keypoint_base/with_keypoint_dev_24.24_test_25.45_epoch48_model.pt
 
 optimizer_args:
   optimizer: Adam
   base_lr: 0.0001
-  step: [ 15, 25, 35]
+  step: [ 15, 25, 35, 50]
   learning_ratio: 1
   weight_decay: 0.0001
   start_epoch: 0
@@ -49,11 +51,13 @@ model_args:
   use_bn: 1
 
 # spatial attention config
-use_spatial_attn: False
+use_spatial_attn: True
 spatial_embedd_dim: 512
 spatial_n_heads: 2
 
 # temporal attention config
-use_temporal_attn: True
+use_temporal_attn: False
 temporal_embedd_dim: 1024
 temporal_n_heads: 4
+
+ignore_model_state_dict: ['temporal_model.rnn.weight_ih_l0', 'temporal_model.rnn.weight_ih_l0_reverse']
