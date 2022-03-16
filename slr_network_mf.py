@@ -151,34 +151,18 @@ class SLRModelMF(nn.Module):
             framewise = x
 
         if self.use_temporal_attn:
-            conv1d_outputs = self.conv1d_type_1_block1(framewise, len_x)
-            conv1d_outputs_key = self.conv1d_type_1_block1(keypoints, len_x)
+            conv1d_outputs = self.conv1d(framewise, len_x)
+            conv1d_outputs_key = self.conv1d(keypoints, len_x)
 
             # x: T, B, C
             block_1 = conv1d_outputs['visual_feat']
             # x_key: T, B, C
             block_1_key = conv1d_outputs_key['visual_feat']
 
-            block_1 = self.temporal_attn(block_1, block_1, block_1)
-            block_1_key = self.temporal_attn(block_1_key, block_1_key, block_1_key)
-
-            block_1 = torch.reshape(block_1,(block_1.shape[1], block_1.shape[2], block_1.shape[0]))
-            block_1_key = torch.reshape(block_1_key,(block_1_key.shape[1], block_1_key.shape[2], block_1_key.shape[0]))
+            x = self.temporal_attn(block_1, block_1, block_1)
+            x_key = self.temporal_attn(block_1_key, block_1_key, block_1_key)
 
             lgt = conv1d_outputs['feat_len']
-
-            block_2 = self.conv1d_type_1_block2(block_1, lgt)
-            block_2_key = self.conv1d_type_1_block2(block_1_key, lgt)
-
-            # x: T, B, C
-            x = block_2['visual_feat']
-            # x_key: T, B, C
-            x_key = block_2_key['visual_feat']
-
-            x = self.temporal_attn(x, x, x)
-            x_key= self.temporal_attn(x_key, x_key, x_key)
-
-            lgt = block_2['feat_len']
         else:
             conv1d_outputs = self.conv1d(framewise, len_x)
             conv1d_outputs_key = self.conv1d(keypoints, len_x)
