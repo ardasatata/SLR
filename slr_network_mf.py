@@ -71,6 +71,12 @@ class SLRModelMF(nn.Module):
         self.use_spatial_attn = use_spatial_attn
         self.use_temporal_attn = use_temporal_attn
 
+        self.conv1d_type_1 = TemporalConv(input_size=512,
+                                   hidden_size=hidden_size,
+                                   conv_type=1,
+                                   use_bn=use_bn,
+                                   num_classes=num_classes)
+
         if self.use_spatial_attn:
             # self.spatial_attn = nn.MultiheadAttention(spatial_embedd_dim, spatial_n_heads)
             self.spatial_attn = MultiHeadedAttention(spatial_n_heads, spatial_embedd_dim, 0.3)
@@ -149,22 +155,27 @@ class SLRModelMF(nn.Module):
             # frame-wise features
             framewise = x
 
-        if self.use_spatial_attn:
-            framewise_reshape = torch.reshape(framewise, (framewise.shape[0], framewise.shape[2], framewise.shape[1]))
-            keypoints_reshape = torch.reshape(keypoints, (keypoints.shape[0], keypoints.shape[2], keypoints.shape[1]))
-
-            spatial_attention_stream = self.spatial_attn(keypoints_reshape, framewise_reshape, framewise_reshape)
-
-            spatial_attention_stream = torch.reshape(spatial_attention_stream,
-                                                       (framewise.shape[0], framewise.shape[1], framewise.shape[2]))
-
-            conv1d_spatial_attn = self.conv1d(spatial_attention_stream, len_x)
-
-            # x_spatial_attn: T, B, C
-            x_spatial_attn = conv1d_spatial_attn['visual_feat']
-
         conv1d_outputs = self.conv1d(framewise, len_x)
         conv1d_outputs_key = self.conv1d(keypoints, len_x)
+
+        if self.use_temporal_attn:
+            conv1d_outputs = self.conv1d_type_1(framewise, len_x)
+            conv1d_outputs_key= self.conv1d_type_1(keypoints, len_x)
+
+            # x: T, B, C
+            x = conv1d_outputs['visual_feat']
+            # x_key: T, B, C
+            x_key = conv1d_outputs_key['visual_feat']
+
+            x_temporal_attn_out = self.temporal_attn(x, x, x)
+            x_key_temporal_attn_out= self.temporal_attn(x_key, x_key, x_key)
+
+            conv1d_block1_attn = self.conv1d_block1(framewise, len_x)
+            conv1d_block1_key_attn = self.conv1d_block1(keypoints, len_x)
+
+            conv1d_outputs = self.conv1d_block1(framewise, len_x)
+            conv1d_outputs_key= self.conv1d_block1(keypoints, len_x)
+
 
         # x: T, B, C
         x = conv1d_outputs['visual_feat']
@@ -178,11 +189,7 @@ class SLRModelMF(nn.Module):
             x_key_temporal_attn_out= self.temporal_attn(x_key, x_key, x_key)
 
         # concat
-        if self.use_spatial_attn:
-            # x_cat = torch.cat([x, x_key, x_spatial_attn], 2)
-            x_cat = x_spatial_attn
-        else:
-            x_cat = torch.cat([x, x_key], 2)
+        x_cat = torch.cat([x, x_key], 2)
 
         tm_outputs = self.temporal_model(x_cat, lgt)
 
