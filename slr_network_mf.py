@@ -45,7 +45,6 @@ class ResnetCustom(nn.Module):
 class SLRModelMF(nn.Module):
     def __init__(self, num_classes, c2d_type, conv_type, use_bn=False, tm_type='BiLSTM',
                  hidden_size=1024, gloss_dict=None, loss_weights=None,
-                 use_spatial_attn=False, spatial_embedd_dim=512, spatial_n_heads=4,
                  use_temporal_attn=False, temporal_embedd_dim=512, temporal_n_heads=4):
         super(SLRModelMF, self).__init__()
         self.decoder = None
@@ -68,26 +67,22 @@ class SLRModelMF(nn.Module):
         self.classifier = nn.Linear(hidden_size, self.num_classes)
         self.register_backward_hook(self.backward_hook)
 
-        self.use_spatial_attn = use_spatial_attn
-        self.use_temporal_attn = use_temporal_attn
-
-        self.conv1d_type_1 = TemporalConv(input_size=512,
+        self.conv1d_type_1_block1 = TemporalConv(input_size=512,
                                    hidden_size=hidden_size,
                                    conv_type=1,
                                    use_bn=use_bn,
                                    num_classes=num_classes)
 
-        if self.use_spatial_attn:
-            # self.spatial_attn = nn.MultiheadAttention(spatial_embedd_dim, spatial_n_heads)
-            self.spatial_attn = MultiHeadedAttention(spatial_n_heads, spatial_embedd_dim, 0.3)
-            print('Using Spatial Attention layer', use_spatial_attn)
-            self.temporal_model = BiLSTMLayer(rnn_type='LSTM', input_size=hidden_size * 1, hidden_size=hidden_size,
-                                              num_layers=2, bidirectional=True)
-        else:
-            self.spatial_attn = None
-            print('Spatial Attention layer not Used', use_spatial_attn)
-            self.temporal_model = BiLSTMLayer(rnn_type='LSTM', input_size=hidden_size * 2, hidden_size=hidden_size,
-                                              num_layers=2, bidirectional=True)
+        self.conv1d_type_1_block2 = TemporalConv(input_size=1024,
+                                   hidden_size=hidden_size,
+                                   conv_type=1,
+                                   use_bn=use_bn,
+                                   num_classes=num_classes)
+
+        self.temporal_model = BiLSTMLayer(rnn_type='LSTM', input_size=hidden_size * 2, hidden_size=hidden_size,
+                                          num_layers=2, bidirectional=True)
+
+        self.use_temporal_attn = use_temporal_attn
 
         if self.use_temporal_attn:
             self.temporal_attn = MultiHeadedAttention(temporal_n_heads, temporal_embedd_dim, 0.3)
@@ -155,50 +150,56 @@ class SLRModelMF(nn.Module):
             # frame-wise features
             framewise = x
 
-        conv1d_outputs = self.conv1d(framewise, len_x)
-        conv1d_outputs_key = self.conv1d(keypoints, len_x)
-
         if self.use_temporal_attn:
-            conv1d_outputs = self.conv1d_type_1(framewise, len_x)
-            conv1d_outputs_key= self.conv1d_type_1(keypoints, len_x)
+            conv1d_outputs = self.conv1d_type_1_block1(framewise, len_x)
+            conv1d_outputs_key = self.conv1d_type_1_block1(keypoints, len_x)
 
+            # x: T, B, C
+            block_1 = conv1d_outputs['visual_feat']
+            # x_key: T, B, C
+            block_1_key = conv1d_outputs_key['visual_feat']
+
+            block_1 = self.temporal_attn(block_1, block_1, block_1)
+            block_1_key = self.temporal_attn(block_1_key, block_1_key, block_1_key)
+
+            block_1 = torch.reshape(block_1,(block_1.shape[1], block_1.shape[2], block_1.shape[0]))
+            block_1_key = torch.reshape(block_1_key,(block_1_key.shape[1], block_1_key.shape[2], block_1_key.shape[0]))
+
+            lgt = conv1d_outputs['feat_len']
+
+            block_2 = self.conv1d_type_1_block2(block_1, lgt)
+            block_2_key = self.conv1d_type_1_block2(block_1_key, lgt)
+
+            # x: T, B, C
+            x = block_2['visual_feat']
+            # x_key: T, B, C
+            x_key = block_2_key['visual_feat']
+
+            x = self.temporal_attn(x, x, x)
+            x_key= self.temporal_attn(x_key, x_key, x_key)
+
+            lgt = block_2['feat_len']
+        else:
+            conv1d_outputs = self.conv1d(framewise, len_x)
+            conv1d_outputs_key = self.conv1d(keypoints, len_x)
             # x: T, B, C
             x = conv1d_outputs['visual_feat']
             # x_key: T, B, C
             x_key = conv1d_outputs_key['visual_feat']
-
-            x_temporal_attn_out = self.temporal_attn(x, x, x)
-            x_key_temporal_attn_out= self.temporal_attn(x_key, x_key, x_key)
-
-            conv1d_block1_attn = self.conv1d_block1(framewise, len_x)
-            conv1d_block1_key_attn = self.conv1d_block1(keypoints, len_x)
-
-            conv1d_outputs = self.conv1d_block1(framewise, len_x)
-            conv1d_outputs_key= self.conv1d_block1(keypoints, len_x)
-
-
-        # x: T, B, C
-        x = conv1d_outputs['visual_feat']
-        # x_key: T, B, C
-        x_key = conv1d_outputs_key['visual_feat']
-
-        lgt = conv1d_outputs['feat_len']
-
-        if self.use_temporal_attn:
-            x_temporal_attn_out = self.temporal_attn(x, x, x)
-            x_key_temporal_attn_out= self.temporal_attn(x_key, x_key, x_key)
+            # feature length
+            lgt = conv1d_outputs['feat_len']
 
         # concat
         x_cat = torch.cat([x, x_key], 2)
 
         tm_outputs = self.temporal_model(x_cat, lgt)
 
-        tm_outputs_ff = self.temporal_model(x, lgt)
-        tm_outputs_key = self.temporal_model(x_key, lgt)
+        # tm_outputs_ff = self.temporal_model(x, lgt)
+        # tm_outputs_key = self.temporal_model(x_key, lgt)
 
         outputs = self.classifier(tm_outputs['predictions'])
-        outputs_ff = self.classifier(tm_outputs_ff['predictions'])
-        outputs_key = self.classifier(tm_outputs_key['predictions'])
+        # outputs_ff = self.classifier(tm_outputs_ff['predictions'])
+        # outputs_key = self.classifier(tm_outputs_key['predictions'])
 
 
         pred = None if self.training \
@@ -218,8 +219,8 @@ class SLRModelMF(nn.Module):
             "conv_sents": conv_pred,
             "key_sents": key_pred,
             "recognized_sents": pred,
-            "seq_ff_logits": outputs_ff,
-            "seq_key_logits": outputs_key,
+            # "seq_ff_logits": outputs_ff,
+            # "seq_key_logits": outputs_key,
         }
 
     def criterion_calculation(self, ret_dict, label, label_lgt):

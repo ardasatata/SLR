@@ -3,12 +3,12 @@ phase: train
 dataset: phoenix14
 # dataset: phoenix14-si5
 num_epoch: 80
-work_dir: ./work_dir/spatial_joint/spatial_joint
-batch_size: 10
+work_dir: ./work_dir/temporal_2/temporal_2
+batch_size: 18
 random_seed: 0
 test_batch_size: 8
 num_worker: 4
-device: 0,1
+device: 0,1,2,3
 log_interval: 50
 eval_interval: 1
 save_interval: 1
@@ -19,8 +19,8 @@ loss_weights:
 #  KeyCTC: 1.0
   SeqCTC: 1.0
 #  Dist: 10.0
-  SeqFullFrameCTC: 1.0
-  SeqKeyCTC: 1.0
+#  SeqFullFrameCTC: 1.0
+#  SeqKeyCTC: 1.0
 
 #load_weights: ./work_dir/with_keypoint_attn1_dev_25.70_test_25.71_epoch6_model.pt
 
@@ -49,14 +49,9 @@ model_args:
   conv_type: 2
   use_bn: 1
 
-# spatial attention config
-use_spatial_attn: True
-spatial_embedd_dim: 512
-spatial_n_heads: 2
-
 # temporal attention config
-use_temporal_attn: False
+use_temporal_attn: True
 temporal_embedd_dim: 1024
 temporal_n_heads: 4
 
-ignore_model_state_dict: ['temporal_model.rnn.weight_ih_l0', 'temporal_model.rnn.weight_ih_l0_reverse']
+#ignore_model_state_dict: ['temporal_model.rnn.weight_ih_l0', 'temporal_model.rnn.weight_ih_l0_reverse']
