@@ -3,8 +3,8 @@ phase: train
 dataset: phoenix14
 # dataset: phoenix14-si5
 num_epoch: 80
-work_dir: ./work_dir/spatial_joint/spatial_joint
-batch_size: 2
+work_dir: ./work_dir/temporal_2_vac/temporal_2_vac
+batch_size: 3
 random_seed: 0
 test_batch_size: 8
 num_worker: 10
@@ -15,10 +15,10 @@ save_interval: 1
 # python in default
 evaluate_tool: python
 loss_weights:
-#  ConvCTC: 1.0
-#  KeyCTC: 1.0
+  ConvCTC: 1.0
+  KeyCTC: 1.0
   SeqCTC: 1.0
-#  Dist: 10.0
+  Dist: 10.0
 #  SeqFullFrameCTC: 1.0
 #  SeqKeyCTC: 1.0
 

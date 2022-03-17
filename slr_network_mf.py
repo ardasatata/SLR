@@ -162,6 +162,10 @@ class SLRModelMF(nn.Module):
             x = self.temporal_attn(block_1, block_1, block_1)
             x_key = self.temporal_attn(block_1_key, block_1_key, block_1_key)
 
+            # cross_attn = self.temporal_attn(block_1_key, block_1, block_1)
+            # x = self.temporal_attn(block_1, block_1, block_1)
+            # x_key = self.temporal_attn(block_1_key, block_1_key, block_1_key)
+
             lgt = conv1d_outputs['feat_len']
         else:
             conv1d_outputs = self.conv1d(framewise, len_x)
