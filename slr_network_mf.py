@@ -241,6 +241,11 @@ class SLRModelMF(nn.Module):
                 loss += weight * self.loss['distillation'](ret_dict["conv_logits"],
                                                            ret_dict["sequence_logits"].detach(),
                                                            use_blank=False)
+
+            elif k == 'DistKey':
+                loss += weight * self.loss['distillation'](ret_dict["key_logits"],
+                                                           ret_dict["sequence_logits"].detach(),
+                                                           use_blank=False)
         return loss
 
     def criterion_init(self):

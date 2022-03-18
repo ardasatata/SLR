@@ -19,6 +19,7 @@ loss_weights:
   KeyCTC: 1.0
   SeqCTC: 1.0
   Dist: 10.0
+  DistKey: 10.0
 #  SeqFullFrameCTC: 1.0
 #  SeqKeyCTC: 1.0
 
