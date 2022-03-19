@@ -2,12 +2,12 @@ feeder: dataset.dataloader_video.BaseFeeder
 phase: train
 dataset: phoenix14
 num_epoch: 80
-work_dir: ./work_dir/with_keypoint/
-batch_size: 8
+work_dir: ./work_dir/baseline_new/
+batch_size: 12
 random_seed: 0
 test_batch_size: 8
-num_worker: 10
-device: 0,1
+num_worker: 4
+device: 0,1,2,3
 log_interval: 50
 eval_interval: 1
 save_interval: 1
@@ -21,7 +21,7 @@ loss_weights:
 optimizer_args:
   optimizer: Adam
   base_lr: 0.0001
-  step: [ 30, 40, 50, 60]
+  step: [ 20, 30, 40, 50]
   learning_ratio: 1
   weight_decay: 0.0001
   start_epoch: 0
@@ -41,3 +41,10 @@ model_args:
   c2d_type: resnet18
   conv_type: 2
   use_bn: 1
+
+# temporal attention config
+use_temporal_attn: False
+temporal_embedd_dim: 1024
+temporal_n_heads: 4
+
+#ignore_model_state_dict: ['temporal_model.rnn.weight_ih_l0', 'temporal_model.rnn.weight_ih_l0_reverse']

@@ -16,13 +16,15 @@ class Compose(object):
     def __init__(self, transforms):
         self.transforms = transforms
 
-    def __call__(self, image, label, file_info=None):
+
+
+    def __call__(self, image, keypoint, label, file_info=None):
         for t in self.transforms:
             if file_info is not None and isinstance(t, WERAugment):
-                image, label = t(image, label, file_info)
+                image, keypoint, label = t(image, keypoint, label, file_info)
             else:
-                image = t(image)
-        return image, label
+                image, keypoint = t(image, keypoint)
+        return image, keypoint, label
 
 
 class WERAugment(object):
@@ -85,13 +87,13 @@ class WERAugment(object):
 
 
 class ToTensor(object):
-    def __call__(self, video):
+    def __call__(self, video, keypoint):
         if isinstance(video, list):
             video = np.array(video)
             video = torch.from_numpy(video.transpose((0, 3, 1, 2))).float()
         if isinstance(video, np.ndarray):
             video = torch.from_numpy(video.transpose((0, 3, 1, 2)))
-        return video
+        return video, keypoint
 
 
 class RandomCrop(object):
@@ -114,7 +116,7 @@ class RandomCrop(object):
                 raise ValueError('If size is a sequence, it must be of len 2.')
         self.size = size
 
-    def __call__(self, clip):
+    def __call__(self, clip, keypoint):
         crop_h, crop_w = self.size
         if isinstance(clip[0], np.ndarray):
             im_h, im_w, im_c = clip[0].shape
@@ -140,9 +142,9 @@ class RandomCrop(object):
             h1 = random.randint(0, im_h - crop_h)
 
         if isinstance(clip[0], np.ndarray):
-            return [img[h1:h1 + crop_h, w1:w1 + crop_w, :] for img in clip]
+            return [img[h1:h1 + crop_h, w1:w1 + crop_w, :] for img in clip], keypoint
         elif isinstance(clip[0], PIL.Image.Image):
-            return [img.crop((w1, h1, w1 + crop_w, h1 + crop_h)) for img in clip]
+            return [img.crop((w1, h1, w1 + crop_w, h1 + crop_h)) for img in clip], keypoint
 
 
 class CenterCrop(object):
@@ -152,7 +154,7 @@ class CenterCrop(object):
         else:
             self.size = size
 
-    def __call__(self, clip):
+    def __call__(self, clip, keypoint):
         try:
             im_h, im_w, im_c = clip[0].shape
         except ValueError:
@@ -162,20 +164,20 @@ class CenterCrop(object):
         new_w = im_w if new_w >= im_w else new_w
         top = int(round((im_h - new_h) / 2.))
         left = int(round((im_w - new_w) / 2.))
-        return [img[top:top + new_h, left:left + new_w] for img in clip]
+        return [img[top:top + new_h, left:left + new_w] for img in clip], keypoint
 
 
 class RandomHorizontalFlip(object):
     def __init__(self, prob):
         self.prob = prob
 
-    def __call__(self, clip):
+    def __call__(self, clip, keypoint):
         # B, H, W, 3
         flag = random.random() < self.prob
         if flag:
             clip = np.flip(clip, axis=2)
             clip = np.ascontiguousarray(copy.deepcopy(clip))
-        return np.array(clip)
+        return np.array(clip), np.array(keypoint)
 
 
 class RandomRotation(object):
@@ -200,7 +202,7 @@ class RandomRotation(object):
                                  'it must be of len 2.')
         self.degrees = degrees
 
-    def __call__(self, clip):
+    def __call__(self, clip, keypoint):
         """
         Args:
         img (PIL.Image or numpy.ndarray): List of images to be cropped
@@ -216,7 +218,7 @@ class RandomRotation(object):
         else:
             raise TypeError('Expected numpy.ndarray or PIL.Image' +
                             'but got list of {0}'.format(type(clip[0])))
-        return rotated
+        return rotated, keypoint
 
 
 class TemporalRescale(object):
@@ -226,7 +228,7 @@ class TemporalRescale(object):
         self.L = 1.0 - temp_scaling
         self.U = 1.0 + temp_scaling
 
-    def __call__(self, clip):
+    def __call__(self, clip, keypoint):
         vid_len = len(clip)
         new_len = int(vid_len * (self.L + (self.U - self.L) * np.random.random()))
         if new_len < self.min_len:
@@ -239,7 +241,8 @@ class TemporalRescale(object):
             index = sorted(random.sample(range(vid_len), new_len))
         else:
             index = sorted(random.choices(range(vid_len), k=new_len))
-        return clip[index]
+
+        return clip[index], keypoint[index]
 
 
 class RandomResize(object):
