@@ -102,8 +102,8 @@ class BaseFeeder(data.Dataset):
         # data = np.load(f"{self.prefix}/features/keypoint-hrnet/{self.mode}/{fi['fileid']}.npy", allow_pickle=True)
         data = np.load(f"{self.prefix}/features/keypoint/{self.mode}/{fi['fileid']}.npy", allow_pickle=True)
 
-        return torch.from_numpy(data[:, selected, :])
-        # return np.array(data[:, selected, :])
+        # return torch.from_numpy(data[:, selected, :])
+        return np.array(data[:, selected, :])
 
     def normalize(self, video, keypoint, label, file_id=None):
         video, keypoint, label = self.data_aug(video, keypoint, label, file_id)
