@@ -3,8 +3,8 @@ phase: train
 dataset: phoenix14
 # dataset: phoenix14-si5
 num_epoch: 80
-work_dir: ./work_dir/temporal_2_vac/temporal_2_vac
-batch_size: 3
+work_dir: ./work_dir/temporal_vac/tp_vac
+batch_size: 2
 random_seed: 0
 test_batch_size: 8
 num_worker: 10
@@ -16,10 +16,10 @@ save_interval: 1
 evaluate_tool: python
 loss_weights:
   ConvCTC: 1.0
-  KeyCTC: 1.0
+#  KeyCTC: 1.0
   SeqCTC: 1.0
   Dist: 25.0
-  DistKey: 25.0
+#  DistKey: 25.0
 #  SeqFullFrameCTC: 1.0
 #  SeqKeyCTC: 1.0
 
@@ -29,7 +29,7 @@ load_weights: ./work_dir/with_keypoint_base/with_keypoint_dev_24.24_test_25.45_e
 optimizer_args:
   optimizer: Adam
   base_lr: 0.0001
-  step: [ 20, 30, 40, 50]
+  step: [ 20, 40]
   learning_ratio: 0.1
   weight_decay: 0.0001
   start_epoch: 0
