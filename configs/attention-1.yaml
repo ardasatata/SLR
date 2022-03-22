@@ -29,7 +29,7 @@ load_weights: ./work_dir/with_keypoint_base/with_keypoint_dev_24.24_test_25.45_e
 optimizer_args:
   optimizer: Adam
   base_lr: 0.0001
-  step: [ 20, 40]
+  step: [ 20, 40, 60]
   learning_ratio: 0.1
   weight_decay: 0.0001
   start_epoch: 0
@@ -52,7 +52,7 @@ model_args:
   use_bn: 1
 
 # temporal attention config
-use_temporal_attn: True
+use_temporal_attn: False
 temporal_embedd_dim: 1024
 temporal_n_heads: 4
 
