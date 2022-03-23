@@ -157,11 +157,11 @@ class SLRModelMF(nn.Module):
             lgt = conv1d_outputs['feat_len']
         else:
             conv1d_outputs = self.conv1d(framewise, len_x)
-            conv1d_outputs_key = self.conv1d(keypoints, len_x)
+            # conv1d_outputs_key = self.conv1d(keypoints, len_x)
             # x: T, B, C
             x = conv1d_outputs['visual_feat']
             # x_key: T, B, C
-            x_key = conv1d_outputs_key['visual_feat']
+            # x_key = conv1d_outputs_key['visual_feat']
             # feature length
             lgt = conv1d_outputs['feat_len']
 
@@ -182,8 +182,8 @@ class SLRModelMF(nn.Module):
             else self.decoder.decode(outputs, lgt, batch_first=False, probs=False)
         conv_pred = None if self.training \
             else self.decoder.decode(conv1d_outputs['conv_logits'], lgt, batch_first=False, probs=False)
-        key_pred = None if self.training \
-            else self.decoder.decode(conv1d_outputs_key['conv_logits'], lgt, batch_first=False, probs=False)
+        # key_pred = None if self.training \
+        #     else self.decoder.decode(conv1d_outputs_key['conv_logits'], lgt, batch_first=False, probs=False)
 
         return {
             "framewise_features": framewise,
