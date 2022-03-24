@@ -3,7 +3,7 @@ phase: train
 dataset: phoenix14
 num_epoch: 80
 work_dir: ./work_dir/new_attn_vac/new_attn
-batch_size: 12
+batch_size: 2
 random_seed: 0
 test_batch_size: 8
 num_worker: 10
@@ -54,4 +54,4 @@ use_temporal_attn: True
 temporal_embedd_dim: 1024
 temporal_n_heads: 4
 
-#ignore_model_state_dict: ['temporal_model.rnn.weight_ih_l0', 'temporal_model.rnn.weight_ih_l0_reverse']
+ignore_model_state_dict: ['temporal_model.rnn.weight_ih_l0', 'temporal_model.rnn.weight_ih_l0_reverse']
