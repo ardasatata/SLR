@@ -136,6 +136,10 @@ class BaseFeeder(data.Dataset):
 
     def normalize(self, video, keypoint, label, file_id=None):
         video, keypoint, label = self.data_aug(video, keypoint, label, file_id)
+
+        if isinstance(keypoint, torch.Tensor):
+            keypoint = keypoint.cpu().detach().numpy()
+
         video = video.float() / 127.5 - 1
         keypoint = 2.*(keypoint - np.min(keypoint)) / np.ptp(keypoint)-1
         return video, torch.from_numpy(keypoint), label
@@ -149,7 +153,7 @@ class BaseFeeder(data.Dataset):
                 video_augmentation.RandomCrop(224),
                 video_augmentation.RandomHorizontalFlip(0.5),
                 video_augmentation.ToTensor(),
-                # video_augmentation.TemporalRescale(0.2),
+                video_augmentation.TemporalRescale(0.2),
                 # video_augmentation.Resize(0.5),
             ])
         else:
