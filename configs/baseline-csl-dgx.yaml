@@ -1,11 +1,11 @@
 feeder: dataset.dataloader_csl.BaseFeeder
 phase: train
 dataset: csl
-num_epoch: 80
+num_epoch: 20
 work_dir: ./work_dir/csl_baseline/csl_baseline
 batch_size: 12
 random_seed: 0
-test_batch_size: 8
+test_batch_size: 4
 num_worker: 10
 device: 0,1,2,3
 log_interval: 50
@@ -20,15 +20,15 @@ loss_weights:
 #  Dist: 10.0
 
 #load_weights: ./work_dir/resnet18_slr_pretrained_distill25.pt
-#load_checkpoints: ./work_dir/with_keypointdev_27.73_epoch29_model.pt
+#load_checkpoints: ./work_dir/csl_baseline/csl_baseline_test_100.00_epoch2_model.pt
 
 optimizer_args:
   optimizer: Adam
   base_lr: 0.0001
-  step: [ 30, 50]
+  step: [ 10, 15]
   learning_ratio: 1
   weight_decay: 0.0001
-  start_epoch: 0
+  start_epoch: 4
   nesterov: False
 
 feeder_args:
