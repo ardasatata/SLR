@@ -133,16 +133,18 @@ def csv2dict(dataset_type):
                     count = count + 1
 
             if dataset_type == 'split2-train':
-                if signer != 'P50' or \
-                        signer != 'P49' or \
-                        signer != 'P48' or \
-                        signer != 'P47' or \
-                        signer != 'P46' or \
-                        signer != 'P45' or \
-                        signer != 'P44' or \
-                        signer != 'P43' or \
-                        signer != 'P42' or \
-                        signer != 'P41':
+                if signer == 'P50' or \
+                        signer == 'P49' or \
+                        signer == 'P48' or \
+                        signer == 'P47' or \
+                        signer == 'P46' or \
+                        signer == 'P45' or \
+                        signer == 'P44' or \
+                        signer == 'P43' or \
+                        signer == 'P42' or \
+                        signer == 'P41':
+                    continue
+                else:
                     info_dict[count] = {
                         'fileid': file_info,
                         'folder': f"{video_path}/{class_num}",
@@ -185,7 +187,7 @@ def csv2dict(dataset_type):
                     count = count + 1
 
     # print(info_dict)
-    # print(count)
+    print(count)
     return info_dict
 
 
