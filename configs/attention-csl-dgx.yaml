@@ -2,7 +2,7 @@ feeder: dataset.dataloader_csl.BaseFeeder
 phase: train
 dataset: csl
 num_epoch: 30
-work_dir: ./work_dir/attention_csl/attn_csl
+work_dir: ./work_dir/attention_csl_seq/attn_csl_seq
 batch_size: 12
 random_seed: 0
 test_batch_size: 12
@@ -14,10 +14,10 @@ save_interval: 1
 # python in default
 evaluate_tool: python
 loss_weights:
-  ConvCTC: 1.0
+#  ConvCTC: 1.0
 #  KeyCTC: 1.0
   SeqCTC: 1.0
-  Dist: 10.0
+#  Dist: 10.0
 
 optimizer_args:
   optimizer: Adam
