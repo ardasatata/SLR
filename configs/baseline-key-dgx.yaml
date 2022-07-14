@@ -4,11 +4,11 @@ dataset: phoenix14
 # dataset: phoenix14-si5
 num_epoch: 80
 work_dir: ./work_dir/baseline_key_only/
-batch_size: 8
+batch_size: 12
 random_seed: 0
 test_batch_size: 8
 num_worker: 10
-device: 0
+device: 0,1,2,3
 log_interval: 50
 eval_interval: 1
 save_interval: 1
@@ -26,7 +26,7 @@ optimizer_args:
   step: [ 30, 40, 50, 60]
   learning_ratio: 1
   weight_decay: 0.0001
-  start_epoch: 30
+  start_epoch: 0
   nesterov: False
 
 feeder_args:
