@@ -1,0 +1,50 @@
+feeder: dataset.dataloader_video.BaseFeeder
+phase: train
+dataset: phoenix14
+# dataset: phoenix14-si5
+num_epoch: 80
+work_dir: ./work_dir/baseline_key_only/
+batch_size: 8
+random_seed: 0
+test_batch_size: 8
+num_worker: 10
+device: 0
+log_interval: 50
+eval_interval: 1
+save_interval: 1
+# python in default
+evaluate_tool: python
+loss_weights:
+#  ConvCTC: 1.0
+#  KeyCTC: 1.0
+  SeqCTC: 1.0
+#  Dist: 10.0
+
+optimizer_args:
+  optimizer: Adam
+  base_lr: 0.00001
+  step: [ 30, 40, 50, 60]
+  learning_ratio: 1
+  weight_decay: 0.0001
+  start_epoch: 30
+  nesterov: False
+
+feeder_args:
+  mode: 'train'
+  datatype: 'video-keypoint'
+#  datatype: 'video'
+  num_gloss: -1
+  drop_ratio: 1.0
+
+model: slr_network_key.SLRModelMF
+decode_mode: beam
+model_args:
+  num_classes: 1296
+  c2d_type: resnet18
+  conv_type: 2
+  use_bn: 1
+
+## spatial attention config
+#use_spatial_attn: True
+#spatial_embedd_dim: 512
+#spatial_n_heads: 2
