@@ -164,13 +164,31 @@ def get_parser():
         '--temporal-embedd-dim',
         type=int,
         default=512,
-        help='Temporpal Attention dim spatial')
+        help='Temporal Attention dim spatial')
 
     parser.add_argument(
         '--temporal-n-heads',
         type=int,
         default=4,
         help='Temporal Attention num of heads spatial')
+
+    parser.add_argument(
+        '--use-spatial-attn',
+        type=str2bool,
+        default=False,
+        help='use spatial attention layer')
+
+    parser.add_argument(
+        '--spatial-embedd-dim',
+        type=int,
+        default=512,
+        help='Spatial Attention dim spatial')
+
+    parser.add_argument(
+        '--spatial-n-heads',
+        type=int,
+        default=2,
+        help='Spatial Attention num of heads spatial')
 
     return parser
 

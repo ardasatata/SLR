@@ -39,7 +39,7 @@ def seq_train(loader, model, optimizer, device, epoch_idx, recoder):
         ret_dict = model(vid, keypoint, vid_lgt, label=label, label_lgt=label_lgt)
         loss = model.criterion_calculation(ret_dict, label, label_lgt)
         if np.isinf(loss.item()) or np.isnan(loss.item()):
-            print(data[-1])
+            # print(data[-1])
             continue
         optimizer.zero_grad()
         loss.backward()
