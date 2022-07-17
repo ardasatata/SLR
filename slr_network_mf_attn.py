@@ -76,8 +76,20 @@ class SLRModelMF(nn.Module):
                                                  use_bn=use_bn,
                                                  num_classes=num_classes)
 
+        self.conv1d_type_1_block1_key = TemporalConv(input_size=512,
+                                                 hidden_size=512,
+                                                 conv_type=1,
+                                                 use_bn=use_bn,
+                                                 num_classes=num_classes)
+
         self.conv1d_type_1_block2 = TemporalConv(input_size=1024,
                                                  hidden_size=hidden_size,
+                                                 conv_type=1,
+                                                 use_bn=use_bn,
+                                                 num_classes=num_classes)
+
+        self.conv1d_type_1_block2_key = TemporalConv(input_size=512,
+                                                 hidden_size=512,
                                                  conv_type=1,
                                                  use_bn=use_bn,
                                                  num_classes=num_classes)
@@ -87,7 +99,7 @@ class SLRModelMF(nn.Module):
         self.classifier = nn.Linear(hidden_size, self.num_classes)
         self.register_backward_hook(self.backward_hook)
 
-        self.temporal_model = BiLSTMLayer(rnn_type='LSTM', input_size=hidden_size * 2,
+        self.temporal_model = BiLSTMLayer(rnn_type='LSTM', input_size=hidden_size + 512,
                                           hidden_size=hidden_size,
                                           num_layers=2, bidirectional=True)
 
@@ -95,20 +107,24 @@ class SLRModelMF(nn.Module):
 
         if self.use_temporal_attn:
             self.temporal_attn = MultiHeadedAttention(temporal_n_heads, temporal_embedd_dim, 0.3)
+            self.temporal_attn_ff = MultiHeadedAttention(temporal_n_heads, 1024, 0.3)
             self.temporal_attn_key = MultiHeadedAttention(temporal_n_heads, 512, 0.3)
             print('Using Temporal Attention layer', use_temporal_attn)
         else:
             self.temporal_attn = None
+            self.temporal_attn_ff = None
             self.temporal_attn_key = None
             print('Temporal Attention layer not Used', use_temporal_attn)
 
         self.use_spatial_attn = use_spatial_attn
 
         if self.use_spatial_attn:
-            self.spatial_attn = nn.MultiheadAttention(spatial_embedd_dim, spatial_n_heads)
+            self.spatial_attn = MultiHeadedAttention(spatial_n_heads, spatial_embedd_dim, 0.3)
+            self.spatial_attn_key = MultiHeadedAttention(spatial_n_heads, 512, 0.3)
             print('Using Spatial Attention layer', use_spatial_attn)
         else:
             self.spatial_attn = None
+            self.spatial_attn_key = None
             print('Spatial Attention layer not Used', use_spatial_attn)
 
     def backward_hook(self, module, grad_input, grad_output):
@@ -169,52 +185,43 @@ class SLRModelMF(nn.Module):
             framewise = x
 
         if self.use_spatial_attn:
-            framewise = torch.reshape(framewise, (framewise.shape[0], framewise.shape[2], framewise.shape[1]))
-            keypoints = torch.reshape(keypoints, (keypoints.shape[0], keypoints.shape[2], keypoints.shape[1]))
+            framewise = torch.reshape(framewise, (framewise.shape[2], framewise.shape[0], framewise.shape[1]))
+            keypoints = torch.reshape(keypoints, (keypoints.shape[2], keypoints.shape[0], keypoints.shape[1]))
 
-            framewise_spatial_attn_out, _ = self.spatial_attn(framewise, framewise, framewise)
-            keypoints_spatial_attn_out, _ = self.spatial_attn(keypoints, keypoints, keypoints)
+            framewise = self.spatial_attn(framewise, framewise, framewise)
+            keypoints = self.spatial_attn_key(keypoints, keypoints, keypoints)
 
-            framewise_spatial_attn_out = torch.reshape(framewise_spatial_attn_out,
-                                                       (framewise.shape[0], framewise.shape[2], framewise.shape[1]))
-            keypoints_spatial_attn_out = torch.reshape(keypoints_spatial_attn_out,
-                                                       (keypoints.shape[0], keypoints.shape[2], keypoints.shape[1]))
+            framewise = torch.reshape(framewise, (framewise.shape[1], framewise.shape[2], framewise.shape[0]))
+            keypoints = torch.reshape(keypoints, (keypoints.shape[1], keypoints.shape[2], keypoints.shape[0]))
 
-            conv1d_outputs = self.conv1d_type_1_block1(framewise_spatial_attn_out, len_x)
-            conv1d_outputs_key = self.conv1d_type_1_block1(keypoints_spatial_attn_out, len_x)
+            conv1d_outputs = self.conv1d_type_1_block1(framewise, len_x)
+            conv1d_outputs_key = self.conv1d_type_1_block1_key(keypoints, len_x)
         else:
             conv1d_outputs = self.conv1d(framewise, len_x)
-            conv1d_outputs_key = self.conv1d(keypoints, len_x)
+            conv1d_outputs_key = self.conv1d_key(keypoints, len_x)
 
         if self.use_temporal_attn:
-            # conv1d_outputs = self.conv1d_type_1_block1(framewise, len_x)
-            # conv1d_outputs_key = self.conv1d_type_1_block1(keypoints, len_x)
-
-            # x: T, B, C
             block_1 = conv1d_outputs['visual_feat']
-            # x_key: T, B, C
             block_1_key = conv1d_outputs_key['visual_feat']
 
-            block_1 = self.temporal_attn(block_1, block_1, block_1)
-            block_1_key = self.temporal_attn(block_1_key, block_1_key, block_1_key)
+            x = self.temporal_attn(block_1, block_1, block_1)
+            x_key = self.temporal_attn_key(block_1_key, block_1_key, block_1_key)
 
-            block_1 = torch.reshape(block_1, (block_1.shape[1], block_1.shape[2], block_1.shape[0]))
-            block_1_key = torch.reshape(block_1_key, (block_1_key.shape[1], block_1_key.shape[2], block_1_key.shape[0]))
+            x = torch.reshape(x, (x.shape[1], x.shape[2], x.shape[0]))
+            x_key = torch.reshape(x_key, (x_key.shape[1], x_key.shape[2], x_key.shape[0]))
 
-            lgt = conv1d_outputs['feat_len']
+            len_x = conv1d_outputs_key['feat_len']
 
-            block_2 = self.conv1d_type_1_block2(block_1, lgt)
-            block_2_key = self.conv1d_type_1_block2(block_1_key, lgt)
+            conv1d_outputs = self.conv1d_type_1_block2(x, len_x)
+            conv1d_outputs_key = self.conv1d_type_1_block2_key(x_key, len_x)
+            #
+            block_2 = conv1d_outputs['visual_feat']
+            block_2_key = conv1d_outputs_key['visual_feat']
+            #
+            x = self.temporal_attn(block_2, block_2, block_2)
+            x_key = self.temporal_attn_key(block_2_key, block_2_key, block_2_key)
 
-            # x: T, B, C
-            x = block_2['visual_feat']
-            # x_key: T, B, C
-            x_key = block_2_key['visual_feat']
-
-            x = self.temporal_attn(x, x, x)
-            x_key = self.temporal_attn(x_key, x_key, x_key)
-
-            lgt = block_2['feat_len']
+            lgt = conv1d_outputs_key['feat_len']
         else:
             conv1d_outputs = self.conv1d(framewise, len_x)
             x = conv1d_outputs['visual_feat']

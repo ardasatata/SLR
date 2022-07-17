@@ -48,9 +48,9 @@ model_args:
   use_bn: 1
 
 # spatial attention config
-use_spatial_attn: True
+use_spatial_attn: False
 spatial_embedd_dim: 512
-spatial_n_heads: 2
+spatial_n_heads: 4
 
 # temporal attention config
 use_temporal_attn: True

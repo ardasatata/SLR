@@ -50,7 +50,7 @@ model_args:
 # spatial attention config
 use_spatial_attn: True
 spatial_embedd_dim: 512
-spatial_n_heads: 2
+spatial_n_heads: 4
 
 # temporal attention config
 use_temporal_attn: True
