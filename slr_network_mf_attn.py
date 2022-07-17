@@ -107,12 +107,10 @@ class SLRModelMF(nn.Module):
 
         if self.use_temporal_attn:
             self.temporal_attn = MultiHeadedAttention(temporal_n_heads, temporal_embedd_dim, 0.3)
-            self.temporal_attn_ff = MultiHeadedAttention(temporal_n_heads, 1024, 0.3)
             self.temporal_attn_key = MultiHeadedAttention(temporal_n_heads, 512, 0.3)
             print('Using Temporal Attention layer', use_temporal_attn)
         else:
             self.temporal_attn = None
-            self.temporal_attn_ff = None
             self.temporal_attn_key = None
             print('Temporal Attention layer not Used', use_temporal_attn)
 
@@ -167,6 +165,10 @@ class SLRModelMF(nn.Module):
         # # print(inputs_kp.shape)
         keypoints = self.masked_bn_kp(inputs_kp, len_x)
         # # print(keypoints.shape)
+
+        if self.use_spatial_attn:
+            keypoints = self.spatial_attn_key(keypoints, keypoints, keypoints)
+
         keypoints = keypoints.reshape(batch, temp, -1).transpose(1, 2)
         # # print(keypoints.shape)
 
@@ -176,6 +178,10 @@ class SLRModelMF(nn.Module):
             inputs = x.reshape(batch * temp, channel, height, width)
             # print(inputs.shape)
             framewise = self.masked_bn(inputs, len_x)
+
+            if self.use_spatial_attn:
+                framewise = self.spatial_attn(framewise, framewise, framewise)
+
             # print(framewise.shape)
             framewise = framewise.reshape(batch, temp, -1).transpose(1, 2)
             # print(framewise.shape)
@@ -185,15 +191,6 @@ class SLRModelMF(nn.Module):
             framewise = x
 
         if self.use_spatial_attn:
-            framewise = torch.reshape(framewise, (framewise.shape[2], framewise.shape[0], framewise.shape[1]))
-            keypoints = torch.reshape(keypoints, (keypoints.shape[2], keypoints.shape[0], keypoints.shape[1]))
-
-            framewise = self.spatial_attn(framewise, framewise, framewise)
-            keypoints = self.spatial_attn_key(keypoints, keypoints, keypoints)
-
-            framewise = torch.reshape(framewise, (framewise.shape[1], framewise.shape[2], framewise.shape[0]))
-            keypoints = torch.reshape(keypoints, (keypoints.shape[1], keypoints.shape[2], keypoints.shape[0]))
-
             conv1d_outputs = self.conv1d_type_1_block1(framewise, len_x)
             conv1d_outputs_key = self.conv1d_type_1_block1_key(keypoints, len_x)
         else:
@@ -223,8 +220,8 @@ class SLRModelMF(nn.Module):
 
             lgt = conv1d_outputs_key['feat_len']
         else:
-            conv1d_outputs = self.conv1d(framewise, len_x)
             x = conv1d_outputs['visual_feat']
+            x_key = conv1d_outputs_key['visual_feat']
             lgt = conv1d_outputs['feat_len']
 
         # concat

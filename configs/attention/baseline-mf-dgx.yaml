@@ -2,7 +2,7 @@ feeder: dataset.dataloader_video.BaseFeeder
 phase: train
 dataset: phoenix14
 num_epoch: 80
-work_dir: ./work_dir/early_late/e_l_attn
+work_dir: ./work_dir/baseline_mf/baseline_mf
 batch_size: 12
 random_seed: 0
 test_batch_size: 8
@@ -53,8 +53,8 @@ spatial_embedd_dim: 512
 spatial_n_heads: 2
 
 # temporal attention config
-use_temporal_attn: True
+use_temporal_attn: False
 temporal_embedd_dim: 1024
 temporal_n_heads: 4
 
-ignore_model_state_dict: ['temporal_model.rnn.weight_ih_l0', 'temporal_model.rnn.weight_ih_l0_reverse']
+#ignore_model_state_dict: ['temporal_model.rnn.weight_ih_l0', 'temporal_model.rnn.weight_ih_l0_reverse']

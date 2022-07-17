@@ -22,7 +22,7 @@ loss_weights:
 #  SeqFullFrameCTC: 1.0
 #  SeqKeyCTC: 1.0
 
-#load_weights: ./work_dir/resnet18_slr_pretrained_distill25.pt
+load_weights: ./work_dir/attn.pt
 
 optimizer_args:
   optimizer: Adam
@@ -50,7 +50,7 @@ model_args:
 # spatial attention config
 use_spatial_attn: False
 spatial_embedd_dim: 512
-spatial_n_heads: 4
+spatial_n_heads: 2
 
 # temporal attention config
 use_temporal_attn: True
