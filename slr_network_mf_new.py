@@ -76,7 +76,7 @@ class SLRModelMF(nn.Module):
 
         self.temporal_model = BiLSTMLayer(rnn_type='LSTM', input_size=hidden_size + 512,
                                           hidden_size=hidden_size,
-                                          num_layers=2, bidirectional=True)
+                                          num_layers=2, bidirectional=False)
 
         self.use_temporal_attn = use_temporal_attn
 
@@ -163,7 +163,9 @@ class SLRModelMF(nn.Module):
         # concat
         x_cat = torch.cat([x, x_key], 2)
 
-        outputs = x_cat
+        tm_outputs = self.temporal_model(x_cat, lgt)
+
+        outputs = tm_outputs["predictions"]
 
         pred = None if self.training \
             else self.decoder.decode(outputs, lgt, batch_first=False, probs=False)
