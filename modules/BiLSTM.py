@@ -44,7 +44,7 @@ class BiLSTMLayer(nn.Module):
         # - hidden: (num_layers * num_directions, batch_size, hidden_size)
         if hidden is not None and self.rnn_type == 'LSTM':
             half = int(hidden.size(0) / 2)
-            hidden = (hidden[:half], hidden[half:])
+            # hidden = (hidden[:half], hidden[half:])
         packed_outputs, hidden = self.rnn(packed_emb, hidden)
 
         # outputs: (max_src_len, batch_size, hidden_size * num_directions)
