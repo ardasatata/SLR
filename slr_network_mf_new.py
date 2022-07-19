@@ -76,7 +76,7 @@ class SLRModelMF(nn.Module):
 
         self.temporal_model = BiLSTMLayer(rnn_type='LSTM', input_size=hidden_size + 512,
                                           hidden_size=hidden_size,
-                                          num_layers=2, bidirectional=False)
+                                          num_layers=2, bidirectional=True)
 
         self.use_temporal_attn = use_temporal_attn
 
