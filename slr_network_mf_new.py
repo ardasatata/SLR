@@ -165,7 +165,7 @@ class SLRModelMF(nn.Module):
 
         tm_outputs = self.temporal_model(x_cat, lgt)
 
-        outputs = tm_outputs["predictions"]
+        outputs = self.classifier(tm_outputs['predictions'])
 
         pred = None if self.training \
             else self.decoder.decode(outputs, lgt, batch_first=False, probs=False)
