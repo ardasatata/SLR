@@ -53,4 +53,4 @@ ignore_model_state_dict: ['temporal_model.rnn.weight_ih_l0',
                           'temporal_model.rnn.weight_ih_l0_reverse',
                           'temporal_model.rnn.weight_hh_l0',
 'temporal_model.rnn.bias_ih_l0', 'temporal_model.rnn.bias_hh_l0', 'temporal_model.rnn.weight_ih_l1',
-                          'temporal_model.rnn.weight_ih_l1', 'temporal_model.rnn.bias_ih_l1', 'temporal_model.rnn.bias_hh_l1']
+                          'temporal_model.rnn.weight_ih_l1', 'temporal_model.rnn.bias_ih_l1', 'temporal_model.rnn.bias_hh_l1' , 'temporal_model.rnn.weight_hh_l1']
