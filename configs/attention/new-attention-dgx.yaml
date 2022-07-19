@@ -49,4 +49,8 @@ use_temporal_attn: True
 temporal_embedd_dim: 1024
 temporal_n_heads: 4
 
-ignore_model_state_dict: ['temporal_model.rnn.weight_ih_l0', 'temporal_model.rnn.weight_ih_l0_reverse']
+ignore_model_state_dict: ['temporal_model.rnn.weight_ih_l0',
+                          'temporal_model.rnn.weight_ih_l0_reverse',
+                          'temporal_model.rnn.weight_hh_l0',
+'temporal_model.rnn.bias_ih_l0', 'temporal_model.rnn.bias_hh_l0', 'temporal_model.rnn.weight_ih_l1',
+                          'temporal_model.rnn.weight_ih_l1', 'temporal_model.rnn.bias_ih_l1', 'temporal_model.rnn.bias_hh_l1']
