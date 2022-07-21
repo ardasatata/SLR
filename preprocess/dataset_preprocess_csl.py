@@ -133,16 +133,18 @@ def csv2dict(dataset_type):
                     count = count + 1
 
             if dataset_type == 'split2-train':
-                if signer != 'P50' or \
-                        signer != 'P49' or \
-                        signer != 'P48' or \
-                        signer != 'P47' or \
-                        signer != 'P46' or \
-                        signer != 'P45' or \
-                        signer != 'P44' or \
-                        signer != 'P43' or \
-                        signer != 'P42' or \
-                        signer != 'P41':
+                if signer == 'P50' or \
+                        signer == 'P49' or \
+                        signer == 'P48' or \
+                        signer == 'P47' or \
+                        signer == 'P46' or \
+                        signer == 'P45' or \
+                        signer == 'P44' or \
+                        signer == 'P43' or \
+                        signer == 'P42' or \
+                        signer == 'P41':
+                    continue
+                else:
                     info_dict[count] = {
                         'fileid': file_info,
                         'folder': f"{video_path}/{class_num}",
@@ -185,7 +187,7 @@ def csv2dict(dataset_type):
                     count = count + 1
 
     # print(info_dict)
-    # print(count)
+    print(count)
     return info_dict
 
 
@@ -248,6 +250,10 @@ if __name__ == '__main__':
                         help='save prefix')
     parser.add_argument('--dataset-root', type=str, default='../dataset/csl',
                         help='path to the dataset')
+    parser.add_argument('--process-image', '-p', action='store_true',
+                        help='resize image')
+    parser.add_argument('--multiprocessing', '-m', action='store_true',
+                        help='whether adopts multiprocessing to accelate the preprocess', default=False)
 
     args = parser.parse_args()
     # mode = ["all", 'split1-train', 'split1-eval', 'split2-train', 'split2-eval']
@@ -266,15 +272,15 @@ if __name__ == '__main__':
 
         generate_gt_stm(information, f"./{args.dataset}/{args.dataset}-groundtruth-{md}.stm")
 
-        # # resize images
-        # video_index = np.arange(len(information) - 1)
-        # # print(f"Resize image to {args.output_res}")
-        # if args.process_image:
-        #     if args.multiprocessing:
-        #         run_mp_cmd(10, partial(resize_dataset, dsize=args.output_res, info_dict=information), video_index)
-        #     else:
-        #         for idx in tqdm(video_index):
-        #             run_cmd(partial(resize_dataset, dsize=args.output_res, info_dict=information), idx)
+        # resize images
+        video_index = np.arange(len(information) - 1)
+        # print(f"Resize image to {args.output_res}")
+        if args.process_image:
+            if args.multiprocessing:
+                run_mp_cmd(10, partial(resize_dataset, dsize=args.output_res, info_dict=information), video_index)
+            else:
+                for idx in tqdm(video_index):
+                    run_cmd(partial(resize_dataset, dsize=args.output_res, info_dict=information), idx)
     sign_dict = sorted(sign_dict.items(), key=lambda d: d[0])
     save_dict = {}
     dict_count = 0

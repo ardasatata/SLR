@@ -2,11 +2,11 @@ feeder: dataset.dataloader_video.BaseFeeder
 phase: train
 dataset: phoenix14
 num_epoch: 80
-work_dir: ./work_dir/baseline_new/
+work_dir: ./work_dir/early_late/e_l_attn
 batch_size: 12
 random_seed: 0
 test_batch_size: 8
-num_worker: 4
+num_worker: 10
 device: 0,1,2,3
 log_interval: 50
 eval_interval: 1
@@ -15,14 +15,20 @@ save_interval: 1
 evaluate_tool: python
 loss_weights:
 #  ConvCTC: 1.0
+#  KeyCTC: 1.0
   SeqCTC: 1.0
-#  Dist: 10.0
+#  Dist: 25.0
+#  DistKey: 25.0
+#  SeqFullFrameCTC: 1.0
+#  SeqKeyCTC: 1.0
+
+#load_weights: ./work_dir/resnet18_slr_pretrained_distill25.pt
 
 optimizer_args:
   optimizer: Adam
   base_lr: 0.0001
-  step: [ 20, 30, 40, 50]
-  learning_ratio: 1
+  step: [ 20, 40, 60]
+  learning_ratio: 0.1
   weight_decay: 0.0001
   start_epoch: 0
   nesterov: False
@@ -30,11 +36,10 @@ optimizer_args:
 feeder_args:
   mode: 'train'
   datatype: 'video-keypoint'
-#  datatype: 'video'
   num_gloss: -1
   drop_ratio: 1.0
 
-model: slr_network_mf.SLRModelMF
+model: slr_network_mf_attn.SLRModelMF
 decode_mode: beam
 model_args:
   num_classes: 1296
@@ -42,9 +47,14 @@ model_args:
   conv_type: 2
   use_bn: 1
 
+# spatial attention config
+use_spatial_attn: False
+spatial_embedd_dim: 512
+spatial_n_heads: 2
+
 # temporal attention config
-use_temporal_attn: False
+use_temporal_attn: True
 temporal_embedd_dim: 1024
 temporal_n_heads: 4
 
-#ignore_model_state_dict: ['temporal_model.rnn.weight_ih_l0', 'temporal_model.rnn.weight_ih_l0_reverse']
+ignore_model_state_dict: ['temporal_model.rnn.weight_ih_l0', 'temporal_model.rnn.weight_ih_l0_reverse']

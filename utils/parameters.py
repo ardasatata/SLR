@@ -111,6 +111,12 @@ def get_parser():
         default=[],
         nargs='+',
         help='the name of weights which will be ignored in the initialization')
+    parser.add_argument(
+        '--ignore-model-state-dict',
+        type=str,
+        default=[],
+        nargs='+',
+        help='the name of weights which in model state dict will be ignored in the initialization')
 
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
     # optim
@@ -149,24 +155,6 @@ def get_parser():
         help='stop training in which epoch')
 
     parser.add_argument(
-        '--use-spatial-attn',
-        type=str2bool,
-        default=False,
-        help='use spatial attention layer')
-
-    parser.add_argument(
-        '--spatial-embedd-dim',
-        type=int,
-        default=512,
-        help='Attention dim spatial')
-
-    parser.add_argument(
-        '--spatial-n-heads',
-        type=int,
-        default=4,
-        help='Attention num of heads spatial')
-
-    parser.add_argument(
         '--use-temporal-attn',
         type=str2bool,
         default=False,
@@ -176,13 +164,31 @@ def get_parser():
         '--temporal-embedd-dim',
         type=int,
         default=512,
-        help='Temporpal Attention dim spatial')
+        help='Temporal Attention dim spatial')
 
     parser.add_argument(
         '--temporal-n-heads',
         type=int,
         default=4,
         help='Temporal Attention num of heads spatial')
+
+    parser.add_argument(
+        '--use-spatial-attn',
+        type=str2bool,
+        default=False,
+        help='use spatial attention layer')
+
+    parser.add_argument(
+        '--spatial-embedd-dim',
+        type=int,
+        default=512,
+        help='Spatial Attention dim spatial')
+
+    parser.add_argument(
+        '--spatial-n-heads',
+        type=int,
+        default=2,
+        help='Spatial Attention num of heads spatial')
 
     return parser
 

@@ -1,30 +1,23 @@
 feeder: dataset.dataloader_video.BaseFeeder
 phase: train
 dataset: phoenix14
-# dataset: phoenix14-si5
 num_epoch: 80
-work_dir: ./work_dir/temporal_vac/tp_vac
-batch_size: 2
+work_dir: ./work_dir/new_attn_vac/new_attn
+batch_size: 12
 random_seed: 0
-test_batch_size: 8
+test_batch_size: 12
 num_worker: 10
-device: 0
+device: 0,1,2,3
 log_interval: 50
 eval_interval: 1
 save_interval: 1
 # python in default
 evaluate_tool: python
 loss_weights:
-  ConvCTC: 1.0
+#  ConvCTC: 1.0
 #  KeyCTC: 1.0
   SeqCTC: 1.0
-  Dist: 25.0
-#  DistKey: 25.0
-#  SeqFullFrameCTC: 1.0
-#  SeqKeyCTC: 1.0
-
-#load_weights: ./work_dir/with_keypoint_attn1_dev_25.70_test_25.71_epoch6_model.pt
-load_weights: ./work_dir/with_keypoint_base/with_keypoint_dev_24.24_test_25.45_epoch48_model.pt
+#  Dist: 25.0
 
 optimizer_args:
   optimizer: Adam
@@ -43,17 +36,21 @@ feeder_args:
   drop_ratio: 1.0
 
 #model: slr_network.SLRModel
-model: slr_network_mf.SLRModelMF
+model: slr_network_mf_new.SLRModelMF
 decode_mode: beam
 model_args:
   num_classes: 1296
   c2d_type: resnet18
-  conv_type: 2
+  conv_type: 3
   use_bn: 1
 
 # temporal attention config
-use_temporal_attn: False
+use_temporal_attn: True
 temporal_embedd_dim: 1024
 temporal_n_heads: 4
 
-#ignore_model_state_dict: ['temporal_model.rnn.weight_ih_l0', 'temporal_model.rnn.weight_ih_l0_reverse']
+ignore_model_state_dict: ['temporal_model.rnn.weight_ih_l0',
+                          'temporal_model.rnn.weight_ih_l0_reverse',
+                          'temporal_model.rnn.weight_hh_l0',
+'temporal_model.rnn.bias_ih_l0', 'temporal_model.rnn.bias_hh_l0', 'temporal_model.rnn.weight_ih_l1',
+                          'temporal_model.rnn.weight_ih_l1', 'temporal_model.rnn.bias_ih_l1', 'temporal_model.rnn.bias_hh_l1' , 'temporal_model.rnn.weight_hh_l1']

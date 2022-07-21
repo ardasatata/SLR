@@ -53,10 +53,8 @@ class BaseFeeder(data.Dataset):
             return input_data, torch.LongTensor(label), self.inputs_list[idx]['original_info'], None
         elif self.data_type == "video-keypoint":
             input_data, label, fi = self.read_video(idx)
-            input_data, label = self.normalize(input_data, label)
-
             keypoint_data = self.load_keypoint(idx)
-
+            input_data, keypoint_data, label = self.normalize(input_data, keypoint_data, label)
             return input_data, torch.LongTensor(label), self.inputs_list[idx]['original_info'], keypoint_data
         else:
             input_data, label = self.read_features(idx)
@@ -104,12 +102,14 @@ class BaseFeeder(data.Dataset):
         # data = np.load(f"{self.prefix}/features/keypoint-hrnet/{self.mode}/{fi['fileid']}.npy", allow_pickle=True)
         data = np.load(f"{self.prefix}/features/keypoint/{self.mode}/{fi['fileid']}.npy", allow_pickle=True)
 
-        return torch.from_numpy(data[:, selected, :])
+        # return torch.from_numpy(data[:, selected, :])
+        return np.array(data[:, selected, :])
 
-    def normalize(self, video, label, file_id=None):
-        video, label = self.data_aug(video, label, file_id)
+    def normalize(self, video, keypoint, label, file_id=None):
+        video, keypoint, label = self.data_aug(video, keypoint, label, file_id)
         video = video.float() / 127.5 - 1
-        return video, label
+        keypoint = 2.*(keypoint - np.min(keypoint)) / np.ptp(keypoint)-1
+        return video, torch.from_numpy(keypoint), label
 
     def transform(self):
         if self.transform_mode == "train":
@@ -120,7 +120,7 @@ class BaseFeeder(data.Dataset):
                 video_augmentation.RandomCrop(224),
                 video_augmentation.RandomHorizontalFlip(0.5),
                 video_augmentation.ToTensor(),
-                # video_augmentation.TemporalRescale(0.2),
+                video_augmentation.TemporalRescale(0.2),
                 # video_augmentation.Resize(0.5),
             ])
         else:

@@ -79,7 +79,7 @@ class SLRModelMF(nn.Module):
                                    use_bn=use_bn,
                                    num_classes=num_classes)
 
-        self.temporal_model = BiLSTMLayer(rnn_type='LSTM', input_size=hidden_size * 2, hidden_size=hidden_size,
+        self.temporal_model = BiLSTMLayer(rnn_type='LSTM', input_size=hidden_size, hidden_size=hidden_size,
                                           num_layers=2, bidirectional=True)
 
         self.use_temporal_attn = use_temporal_attn
@@ -136,19 +136,19 @@ class SLRModelMF(nn.Module):
         keypoints = keypoints.reshape(batch, temp, -1).transpose(1, 2)
         # print(keypoints.shape)
 
-        if len(x.shape) == 5:
-            # videos
-            batch, temp, channel, height, width = x.shape
-            inputs = x.reshape(batch * temp, channel, height, width)
-            # print(inputs.shape)
-            framewise = self.masked_bn(inputs, len_x)
-            # print(framewise.shape)
-            framewise = framewise.reshape(batch, temp, -1).transpose(1, 2)
-            # print(framewise.shape)
-
-        else:
-            # frame-wise features
-            framewise = x
+        # if len(x.shape) == 5:
+        #     # videos
+        #     # batch, temp, channel, height, width = x.shape
+        #     # inputs = x.reshape(batch * temp, channel, height, width)
+        #     # # print(inputs.shape)
+        #     # framewise = self.masked_bn(inputs, len_x)
+        #     # # print(framewise.shape)
+        #     # framewise = framewise.reshape(batch, temp, -1).transpose(1, 2)
+        #     # print(framewise.shape)
+        #
+        # else:
+        #     # frame-wise features
+        #     framewise = x
 
         if self.use_temporal_attn:
             conv1d_outputs = self.conv1d(framewise, len_x)
@@ -168,17 +168,17 @@ class SLRModelMF(nn.Module):
 
             lgt = conv1d_outputs['feat_len']
         else:
-            conv1d_outputs = self.conv1d(framewise, len_x)
+            # conv1d_outputs = self.conv1d(framewise, len_x)
             conv1d_outputs_key = self.conv1d(keypoints, len_x)
             # x: T, B, C
-            x = conv1d_outputs['visual_feat']
+            # x = conv1d_outputs['visual_feat']
             # x_key: T, B, C
             x_key = conv1d_outputs_key['visual_feat']
             # feature length
-            lgt = conv1d_outputs['feat_len']
+            lgt = conv1d_outputs_key['feat_len']
 
         # concat
-        x_cat = torch.cat([x, x_key], 2)
+        x_cat = torch.cat([x_key], 2)
 
         tm_outputs = self.temporal_model(x_cat, lgt)
 
@@ -193,15 +193,15 @@ class SLRModelMF(nn.Module):
         pred = None if self.training \
             else self.decoder.decode(outputs, lgt, batch_first=False, probs=False)
         conv_pred = None if self.training \
-            else self.decoder.decode(conv1d_outputs['conv_logits'], lgt, batch_first=False, probs=False)
+            else self.decoder.decode(conv1d_outputs_key['conv_logits'], lgt, batch_first=False, probs=False)
         key_pred = None if self.training \
             else self.decoder.decode(conv1d_outputs_key['conv_logits'], lgt, batch_first=False, probs=False)
 
         return {
-            "framewise_features": framewise,
+            "framewise_features": None,
             "visual_features": x_cat,
             "feat_len": lgt,
-            "conv_logits": conv1d_outputs['conv_logits'],
+            "conv_logits": conv1d_outputs_key['conv_logits'],
             "key_logits": conv1d_outputs_key['conv_logits'],
             "sequence_logits": outputs,
             "conv_sents": conv_pred,
