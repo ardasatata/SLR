@@ -1,9 +1,3 @@
-# VAC_CSLR
-[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/visual-alignment-constraint-for-continuous/sign-language-recognition-on-rwth-phoenix)](https://paperswithcode.com/sota/sign-language-recognition-on-rwth-phoenix?p=visual-alignment-constraint-for-continuous)
-
-This repo holds codes of the paper: Visual Alignment Constraint for Continuous Sign Language Recognition.(ICCV 2021) [[paper]](https://arxiv.org/abs/2104.02330)
-
----
 ### Prerequisites
 
 - This project is implemented in Pytorch (>1.8). Thus please install Pytorch first.
@@ -23,26 +17,28 @@ This repo holds codes of the paper: Visual Alignment Constraint for Continuous S
 2. After finishing dataset download, extract it to ./dataset/phoenix, it is suggested to make a soft link toward downloaded dataset.   
     ```bash
    ln -s PATH_TO_DATASET/phoenix2014-release ./dataset/phoenix2014
+   ```
+   For CSL dataset please link it this way   
+    ```bash
    ln -s PATH_TO_DATASET/CSL ./dataset/csl
    ```
-
 3. The original image sequence is 210x260, we resize it to 256x256 for augmentation. Run the following command to generate gloss dict and resize image sequence.     
 
    ```bash
    cd ./preprocess
    python dataset_preprocess.py --process-image --multiprocessing
    ```
+4.  For CSL preprocessing please run this command below
+
+   ```bash
+   cd ./preprocess
+   python dataset_preprocess_csl.py --process-image --multiprocessing
+   ```
 
 ### Inference
 
-​	We provide the pretrained models for inference, you can download them from:
-
-| Backbone | WER on Dev | WER on Test | Pretrained model                                             |
-| -------- | ---------- | ----------- | ------------------------------------------------------------ |
-| ResNet18 | 21.2%      | 22.3%       | [[Baidu]](https://pan.baidu.com/s/12WSc2Xhy7LSkLojh1XqY6g) (passwd: qi83)<br />[[Dropbox]](https://www.dropbox.com/s/zbas78emfz5m4bp/resnet18_slr_pretrained_distill25.pt?dl=0)     
-
 ​	To evaluate the pretrained model, run the command below：   
-`python main.py --load-weights resnet18_slr_pretrained.pt --phase test`
+`python main.py --load-weights saved_model.pt --phase test`
 
 ### Training
 
@@ -54,43 +50,4 @@ The priorities of configuration files are: command line > config file > default 
 
 We also provide feature extraction function to extract frame-wise features for other research purpose, which can be achieved by:
 
-`python main.py --load-weights PATH_TO_PRETRAINED_MODEL --phase features ` 
-
-### To Do List
-
-- [x] Pure python implemented evaluation tools.
-- [x] WAR and WER calculation scripts.
-
-### Citation
-
-If you find this repo useful in your research works, please consider citing:
-
-```latex
-@InProceedings{Min_2021_ICCV,
-    author    = {Min, Yuecong and Hao, Aiming and Chai, Xiujuan and Chen, Xilin},
-    title     = {Visual Alignment Constraint for Continuous Sign Language Recognition},
-    booktitle = {Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)},
-    month     = {October},
-    year      = {2021},
-    pages     = {11542-11551}
-}
-```
-
-### Relevant paper
-
-Self-Mutual Distillation Learning for Continuous Sign Language Recognition[[paper]](https://openaccess.thecvf.com/content/ICCV2021/html/Hao_Self-Mutual_Distillation_Learning_for_Continuous_Sign_Language_Recognition_ICCV_2021_paper.html)
-
-```latex
-@InProceedings{Hao_2021_ICCV,
-    author    = {Hao, Aiming and Min, Yuecong and Chen, Xilin},
-    title     = {Self-Mutual Distillation Learning for Continuous Sign Language Recognition},
-    booktitle = {Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)},
-    month     = {October},
-    year      = {2021},
-    pages     = {11303-11312}
-}
-```
-
-### Acknowledge
-
-We appreciate the help from Runpeng Cui, Hao Zhou@[Rhythmblue](https://github.com/Rhythmblue) and Xinzhe Han@[GeraldHan](https://github.com/GeraldHan) :)
+`python main.py --load-weights PATH_TO_PRETRAINED_MODEL --phase features `

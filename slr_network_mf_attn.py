@@ -1,12 +1,9 @@
-import pdb
 import copy
 
 import torchvision
 
 import utils
 import torch
-import types
-import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
@@ -23,19 +20,14 @@ class Identity(nn.Module):
     def forward(self, x):
         return x
 
-
+# 1ch ResNet
 class ResnetCustom(nn.Module):
 
     def __init__(self, in_channels=1):
         super(ResnetCustom, self).__init__()
 
-        # bring resnet
         self.model = torchvision.models.resnet18(pretrained=False)
 
-        # original definition of the first layer on the renset class
-        # self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
-
-        # your case
         self.model.conv1 = nn.Conv2d(in_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
 
     def forward(self, x):
@@ -134,10 +126,9 @@ class SLRModelMF(nn.Module):
             return torch.cat([tensor, tensor.new(length - tensor.size(0), *tensor.size()[1:]).zero_()])
 
         x = torch.cat([inputs[len_x[0] * idx:len_x[0] * idx + lgt] for idx, lgt in enumerate(len_x)])
-        # print(x.shape)
+
         x = self.conv2d(x)
-        # print(x.shape)
-        # print('masked_bn')
+
         x = torch.cat([pad(x[sum(len_x[:idx]):sum(len_x[:idx + 1])], len_x[0])
                        for idx, lgt in enumerate(len_x)])
         return x
@@ -147,49 +138,42 @@ class SLRModelMF(nn.Module):
             return torch.cat([tensor, tensor.new(length - tensor.size(0), *tensor.size()[1:]).zero_()])
 
         x = torch.cat([inputs[len_x[0] * idx:len_x[0] * idx + lgt] for idx, lgt in enumerate(len_x)])
-        # print(x.shape)
+
         x = self.conv2d_1ch(x)
-        # print(x.shape)
-        # print('masked_bn')
+
         x = torch.cat([pad(x[sum(len_x[:idx]):sum(len_x[:idx + 1])], len_x[0])
                        for idx, lgt in enumerate(len_x)])
         return x
 
     def forward(self, x, key_x, len_x, label=None, label_lgt=None):
-        # print(x.shape)
-        # print(len_x.shape)
-        # print(key_x.shape)
 
         batch, temp, placeholder, point, axis = key_x.shape
         inputs_kp = key_x.reshape(batch * temp, placeholder, point, axis)
-        # # print(inputs_kp.shape)
+
         keypoints = self.masked_bn_kp(inputs_kp, len_x)
-        # # print(keypoints.shape)
 
         if self.use_spatial_attn:
             keypoints = self.spatial_attn_key(keypoints, keypoints, keypoints)
 
         keypoints = keypoints.reshape(batch, temp, -1).transpose(1, 2)
-        # # print(keypoints.shape)
 
         if len(x.shape) == 5:
             # videos
             batch, temp, channel, height, width = x.shape
             inputs = x.reshape(batch * temp, channel, height, width)
-            # print(inputs.shape)
+
             framewise = self.masked_bn(inputs, len_x)
 
             if self.use_spatial_attn:
                 framewise = self.spatial_attn(framewise, framewise, framewise)
 
-            # print(framewise.shape)
             framewise = framewise.reshape(batch, temp, -1).transpose(1, 2)
-            # print(framewise.shape)
 
         else:
             # frame-wise features
             framewise = x
 
+        # SPATIAL ATTN CONDITION
         if self.use_spatial_attn:
             conv1d_outputs = self.conv1d_type_1_block1(framewise, len_x)
             conv1d_outputs_key = self.conv1d_type_1_block1_key(keypoints, len_x)
@@ -197,6 +181,7 @@ class SLRModelMF(nn.Module):
             conv1d_outputs = self.conv1d(framewise, len_x)
             conv1d_outputs_key = self.conv1d_key(keypoints, len_x)
 
+        # TEMPORAL ATTN CONDITION
         if self.use_temporal_attn:
             block_1 = conv1d_outputs['visual_feat']
             block_1_key = conv1d_outputs_key['visual_feat']
@@ -211,10 +196,10 @@ class SLRModelMF(nn.Module):
 
             conv1d_outputs = self.conv1d_type_1_block2(x, len_x)
             conv1d_outputs_key = self.conv1d_type_1_block2_key(x_key, len_x)
-            #
+
             block_2 = conv1d_outputs['visual_feat']
             block_2_key = conv1d_outputs_key['visual_feat']
-            #
+
             x = self.temporal_attn(block_2, block_2, block_2)
             x_key = self.temporal_attn_key(block_2_key, block_2_key, block_2_key)
 
@@ -224,7 +209,7 @@ class SLRModelMF(nn.Module):
             x_key = conv1d_outputs_key['visual_feat']
             lgt = conv1d_outputs['feat_len']
 
-        # concat
+        # concatenate FF & Keypoints
         x_cat = torch.cat([x, x_key], 2)
 
         tm_outputs = self.temporal_model(x_cat, lgt)
@@ -235,8 +220,6 @@ class SLRModelMF(nn.Module):
             else self.decoder.decode(outputs, lgt, batch_first=False, probs=False)
         conv_pred = None if self.training \
             else self.decoder.decode(conv1d_outputs['conv_logits'], lgt, batch_first=False, probs=False)
-        # key_pred = None if self.training \
-        #     else self.decoder.decode(conv1d_outputs_key['conv_logits'], lgt, batch_first=False, probs=False)
 
         return {
             "framewise_features": framewise,
@@ -301,10 +284,6 @@ def ScaledDotProductAttention(query, key, value, mask=None, dropout=None):
     d_k = query.size(-1)
     scores = torch.matmul(query, key.transpose(-2, -1)) \
              / math.sqrt(d_k)
-
-    # src_mask=(batch, 1, 1, max_seq) #NOTE: this is like the tutorials but it is weird!
-    # trg_mask = (batch, 1, max_seq, max_seq)
-    # score=(batch, n_heads, Seq, Seq)
 
     if mask is not None:
         scores = scores.masked_fill(mask == 0, -1e9)
